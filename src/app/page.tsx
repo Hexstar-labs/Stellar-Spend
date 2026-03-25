@@ -5,60 +5,80 @@ import FormCard, { type OfframpPayload, type QuoteResult } from "@/components/Fo
 import RightPanel from "@/components/RightPanel";
 import RecentOfframpsTable from "@/components/RecentOfframpsTable";
 import ProgressSteps from "@/components/ProgressSteps";
+import Header from "@/components/Header";
 import { TransactionProgressModal } from "@/components/TransactionProgressModal";
+import { useStellarWallet } from "@/hooks/useStellarWallet";
 import { OfframpStep } from "@/types/stellaramp";
 
 export default function Home() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { wallet, isConnected, isConnecting, error: walletError, connect, disconnect } =
+    useStellarWallet();
+
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
   const [quote, setQuote] = useState<QuoteResult | null>(null);
-  
-  // Test state for modal
   const [modalStep, setModalStep] = useState<OfframpStep>("idle");
+  const [modalError, setModalError] = useState<string | undefined>(undefined);
 
-  const handleConnect = useCallback(() => {
-    setIsConnecting(true);
-    setTimeout(() => {
-      setIsConnected(true);
-      setIsConnecting(false);
-    }, 1000);
-  }, []);
+  const handleConnect = useCallback(async () => {
+    try {
+      await connect();
+    } catch {
+      // error is surfaced via walletError from useStellarWallet
+    }
+  }, [connect]);
 
   const handleDisconnect = useCallback(() => {
-    setIsConnected(false);
+    disconnect();
     setAmount("");
     setCurrency("");
     setQuote(null);
-  }, []);
+  }, [disconnect]);
 
   const handleSubmit = useCallback(async (_payload: OfframpPayload) => {
-    // Show modal for testing
     setModalStep("initiating");
-    
-    // Simulate flow
     const flow: OfframpStep[] = ["awaiting-signature", "submitting", "processing", "settling", "success"];
     for (const step of flow) {
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 1500));
       setModalStep(step);
     }
   }, []);
 
   return (
     <main className="min-h-screen p-4 bg-[#0a0a0a]">
-      <TransactionProgressModal 
-        step={modalStep} 
-        onClose={() => setModalStep("idle")} 
+      <TransactionProgressModal
+        step={modalStep}
+        errorMessage={modalError}
+        onClose={() => setModalStep("idle")}
       />
-      
+
       <Header
         subtitle="Offramp Dashboard"
         isConnected={isConnected}
         isConnecting={isConnecting}
+        walletAddress={wallet?.publicKey}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
       />
+
+      {walletError && (
+        <div
+          role="alert"
+          style={{
+            margin: "12px 0",
+            padding: "12px 16px",
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.4)",
+            borderRadius: 8,
+            color: "#f87171",
+            fontSize: 13,
+            letterSpacing: "0.02em",
+          }}
+        >
+          {walletError}
+        </div>
+      )}
+
       <section className="border border-[#333333] px-[2.6rem] py-8 max-[1100px]:p-4 overflow-hidden mt-6">
         <div className="grid grid-cols-[1fr_370px] gap-6 max-[1100px]:grid-cols-1 overflow-hidden w-full">
           <div data-testid="FormCard">

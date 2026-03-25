@@ -208,24 +208,19 @@ export class StellarWalletAdapter {
       );
     }
 
-
-    const connectedResult = await freighterApi.isConnected();
-    if (connectedResult.error) {
-      throw friendlyError(
-        connectedResult.error,
-        "Could not reach Freighter. Please try again."
-      );
-    }
-
-    if (connectedResult.isConnected) {
-      const addressResult = await freighterApi.getAddress();
-      if (!addressResult.error && addressResult.address) {
-        return this._store("freighter", addressResult.address);
+    // Step 2 — network mismatch check.
+    const networkDetails = await freighterApi.getNetworkDetails();
+    if (!networkDetails.error) {
+      const passphrase = networkDetails.networkPassphrase ?? "";
+      if (passphrase && passphrase !== MAINNET_PASSPHRASE) {
+        const networkName = networkDetails.network ?? passphrase;
+        throw new Error(
+          `Freighter is set to ${networkName}. Please switch to Mainnet.`
+        );
       }
     }
 
-
-    // Step 2 — check whether this origin is already connected/allowed.
+    // Step 3 — check whether this origin is already connected/allowed.
     const connectedResult = await freighterApi.isConnected();
     if (connectedResult.error) {
       throw friendlyError(connectedResult.error, "Could not reach Freighter. Please try again.");
@@ -233,7 +228,7 @@ export class StellarWalletAdapter {
 
     const alreadyConnected = connectedResult.isConnected === true;
 
-    // Step 3 — if already connected, attempt a silent address fetch first.
+    // Step 4 — if already connected, attempt a silent address fetch first.
     if (alreadyConnected) {
       const addressResult = await freighterApi.getAddress();
       if (!addressResult.error && addressResult.address) {
@@ -244,7 +239,7 @@ export class StellarWalletAdapter {
       // to requestAccess() below (handles locked-wallet edge case).
     }
 
-    // Step 4 — request permission / unlock prompt.
+    // Step 5 — request permission / unlock prompt.
 
     const accessResult = await freighterApi.requestAccess();
     if (accessResult.error) {
