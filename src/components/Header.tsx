@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/cn";
-import { Skeleton } from "./ui/Skeleton";
 
 export interface HeaderProps {
   subtitle: string;
@@ -91,17 +89,14 @@ export function Header({
         {isConnected && (
           <div className="flex flex-col items-end gap-0.5 max-[720px]:items-start">
             {isBalanceLoading ? (
-              <div className="flex flex-col items-end gap-1">
-                <Skeleton width={110} height={13} />
-                <Skeleton width={90} height={13} />
-              </div>
+              <span className="text-xs text-[#777777] tracking-widest">loading...</span>
             ) : (
               <>
                 <span className="text-xs text-[#c9a962] tracking-wider">
-                  {stellarUsdcBalance ?? "0.00"} USDC
+                  {stellarUsdcBalance ?? "—"} USDC
                 </span>
                 <span className="text-xs text-[#777777] tracking-wider">
-                  {stellarXlmBalance ?? "0.00"} XLM
+                  {stellarXlmBalance ?? "—"} XLM
                 </span>
               </>
             )}

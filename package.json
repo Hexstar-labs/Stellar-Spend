@@ -13,7 +13,7 @@
     "@allbridge/bridge-core-sdk": "^3.20.0",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^14.6.1",
-    "next": "^15.5.12",
+    "next": "^15.5.14",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "stellar-sdk": "^13.3.0",

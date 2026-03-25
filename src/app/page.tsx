@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 import FormCard, { type OfframpPayload, type QuoteResult } from "@/components/FormCard";
 import RightPanel from "@/components/RightPanel";
 import RecentOfframpsTable from "@/components/RecentOfframpsTable";
@@ -8,10 +8,12 @@ import ProgressSteps from "@/components/ProgressSteps";
 import { TransactionProgressModal } from "@/components/TransactionProgressModal";
 import { Header } from "@/components/Header";
 import { useStellarWallet } from "@/hooks/useStellarWallet";
+import { useWalletFlow } from "@/hooks/useWalletFlow";
 import { OfframpStep } from "@/types/stellaramp";
 
 export default function Home() {
-  const { wallet, isConnecting, error, connect, disconnect, signTransaction } = useStellarWallet();
+  const { wallet, isConnecting: isWalletConnecting, error, connect, disconnect } = useStellarWallet();
+  const { state, variant, steps, setConnecting, setConnected, setPreConnect } = useWalletFlow();
   
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
@@ -20,35 +22,59 @@ export default function Home() {
 
   const isConnected = !!wallet;
 
+  // Sync wallet state with flow state via useEffect
+  useEffect(() => {
+    if (isWalletConnecting) {
+      setConnecting();
+    } else if (isConnected) {
+      setConnected();
+    } else {
+      setPreConnect();
+    }
+  }, [isWalletConnecting, isConnected, setConnecting, setConnected, setPreConnect]);
+
+  const handleConnect = useCallback(async () => {
+    // Note: The useEffect will also trigger transitions, but explicit calls 
+    // here provide immediate UI feedback even before the async wallet state updates.
+    setConnecting();
+    const result = await connect();
+    if (result) {
+      setConnected();
+    } else {
+      setPreConnect();
+    }
+  }, [connect, setConnecting, setConnected, setPreConnect]);
+
+  const handleDisconnect = useCallback(() => {
+    disconnect();
+    setPreConnect();
+    setAmount("");
+    setCurrency("");
+    setQuote(null);
+  }, [disconnect, setPreConnect]);
+
   const handleSubmit = useCallback(async (payload: OfframpPayload) => {
     setModalStep("initiating");
     
     try {
-      // 1. Awaiting Signature
       setModalStep("awaiting-signature");
-      // In a real app, we would sign the XDR here:
-      // const signed = await signTransaction(payload.quote.someXdr);
       await new Promise(r => setTimeout(r, 2000));
 
-      // 2. Submitting
       setModalStep("submitting");
       await new Promise(r => setTimeout(r, 2000));
 
-      // 3. Processing
       setModalStep("processing");
       await new Promise(r => setTimeout(r, 2000));
 
-      // 4. Settling
       setModalStep("settling");
       await new Promise(r => setTimeout(r, 2000));
 
-      // 5. Success
       setModalStep("success");
     } catch (err) {
       console.error("Transaction failed:", err);
       setModalStep("error");
     }
-  }, [signTransaction]);
+  }, []);
 
   return (
     <main className="min-h-screen p-4 bg-[#0a0a0a]">
@@ -59,12 +85,12 @@ export default function Home() {
       />
       
       <Header
-        subtitle="Stellar Offramp Dashboard"
+        subtitle={variant.subtitle}
         isConnected={isConnected}
-        isConnecting={isConnecting}
+        isConnecting={isWalletConnecting}
         walletAddress={wallet?.publicKey}
-        onConnect={() => connect()}
-        onDisconnect={disconnect}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
       />
 
       <section className="border border-[#333333] px-[2.6rem] py-8 max-[1100px]:p-4 overflow-hidden mt-6">
@@ -72,8 +98,8 @@ export default function Home() {
           <div data-testid="FormCard">
             <FormCard
               isConnected={isConnected}
-              isConnecting={isConnecting}
-              onConnect={() => connect()}
+              isConnecting={isWalletConnecting}
+              onConnect={handleConnect}
               onSubmit={handleSubmit}
               onQuoteChange={setQuote}
               onAmountChange={setAmount}
@@ -87,12 +113,12 @@ export default function Home() {
           >
             <RightPanel
               isConnected={isConnected}
-              isConnecting={isConnecting}
+              isConnecting={isWalletConnecting}
               amount={amount}
               quote={quote}
               isLoadingQuote={false}
               currency={currency}
-              onConnect={() => connect()}
+              onConnect={handleConnect}
             />
           </div>
           
@@ -101,7 +127,12 @@ export default function Home() {
           </div>
           
           <div className="col-span-1 min-[1101px]:col-span-2 mt-4 max-[1100px]:block">
-            <ProgressSteps isConnected={isConnected} isConnecting={isConnecting} />
+            {/* The ProgressSteps component now consumes the memoized steps from useWalletFlow */}
+            <ProgressSteps 
+              isConnected={isConnected} 
+              isConnecting={isWalletConnecting} 
+              steps={steps} 
+            />
           </div>
         </div>
       </section>
