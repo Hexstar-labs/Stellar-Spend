@@ -119,6 +119,11 @@ export class StellarWalletAdapter {
     }
   }
 
+  /**
+   * Returns true when a valid Lobstr provider is present on the window object.
+   * Checks both window.lobstr and window.stellar?.isLobstr, and validates the
+   * provider interface before returning true.
+   */
   isLobstrAvailable(): boolean {
 
     return resolveLobstrProvider() !== null;
@@ -188,10 +193,12 @@ export class StellarWalletAdapter {
       this._connectingPromise = null;
     });
 
+
     return this._connectingPromise;
   }
 
   private async _doConnectFreighter(): Promise<StellarWallet> {
+
     // Step 1 — extension presence check.
 
     const available = await this.isFreighterAvailable();
@@ -367,6 +374,7 @@ export class StellarWalletAdapter {
     return this._store("freighter", retryResult.address);
 
 
+
     if (!publicKey) {
       const access = await freighterApi.requestAccess();
       if (access.error || !access.address)
@@ -407,14 +415,19 @@ export class StellarWalletAdapter {
 
   }
 
-  // ── Auto-detect ────────────────────────────────────────────────────────────
+
 
   async connectAuto(): Promise<StellarWallet> {
     if (await this.isFreighterAvailable()) return this.connectFreighter();
     if (this.isLobstrAvailable()) return this.connectLobstr();
 
     throw new Error(
+
+      "No Stellar wallet found. Please install Freighter (https://freighter.app) " +
+        "or Lobstr (https://lobstr.co)."
+
       "No Stellar wallet found. Please install Freighter (https://freighter.app) or Lobstr (https://lobstr.co)."
+
     );
 
     throw new Error('No Stellar wallet found. Please install Freighter or Lobstr.');
@@ -447,6 +460,38 @@ export class StellarWalletAdapter {
         throw friendlyError(result.error, "Transaction signing failed. Please try again.");
       }
       if (!result.signedTxXdr) {
+
+        throw new Error(
+          "Freighter returned an empty signed transaction. Please try again."
+        );
+      }
+      return result.signedTxXdr;
+    }
+
+    // Lobstr signing
+    const provider = resolveLobstrProvider();
+    if (!provider) {
+      throw new Error(
+        "Lobstr is no longer available. Please reconnect your wallet."
+      );
+    }
+
+    let signResult: { signedXdr: string };
+    try {
+      signResult = await provider.signTransaction(xdr, {
+        networkPassphrase: MAINNET_PASSPHRASE,
+      });
+    } catch (err: unknown) {
+      throw friendlyError(err, "Transaction signing failed. Please try again.");
+    }
+
+    if (!signResult?.signedXdr) {
+      throw new Error(
+        "Lobstr returned an empty signed transaction. Please try again."
+      );
+    }
+    return signResult.signedXdr;
+
         throw new Error("Freighter returned an empty signed transaction. Please try again.");
       }
       return result.signedTxXdr;
@@ -526,7 +571,7 @@ export class StellarWalletAdapter {
 
   }
 
-  // ── State accessors ────────────────────────────────────────────────────────
+
 
 
   getWallet(): StellarWallet | null {
