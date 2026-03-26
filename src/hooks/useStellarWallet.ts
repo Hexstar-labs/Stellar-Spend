@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getStellarWalletAdapter, type StellarWallet, type WalletType } from "@/lib/stellar/wallet-adapter";
+import { TransactionStorage } from "@/lib/transaction-storage";
 
 export function useStellarWallet() {
   const [wallet, setWallet] = useState<StellarWallet | null>(null);
@@ -10,7 +11,7 @@ export function useStellarWallet() {
 
   const adapter = useMemo(() => getStellarWalletAdapter(), []);
 
-  // Restore wallet session on mount
+  // Restore wallet session on mount — only from in-memory adapter state (no localStorage auto-reconnect)
   useEffect(() => {
     try {
       const existing = adapter.getWallet();
@@ -18,7 +19,6 @@ export function useStellarWallet() {
         setWallet(existing);
       }
     } catch (err: any) {
-      // Safely handle errors during restoration to prevent app crash
       console.error("Failed to restore wallet session:", err);
       setError(err instanceof Error ? err.message : "Failed to restore wallet session");
     }
@@ -29,7 +29,6 @@ export function useStellarWallet() {
     setError(null);
     try {
       let connected: StellarWallet;
-      
       if (walletType === "freighter") {
         connected = await adapter.connectFreighter();
       } else if (walletType === "lobstr") {
@@ -37,11 +36,9 @@ export function useStellarWallet() {
       } else {
         connected = await adapter.connectAuto();
       }
-      
       setWallet(connected);
       return connected;
     } catch (err: any) {
-      // Surface error via state instead of throwing
       const msg = err instanceof Error ? err.message : "Failed to connect wallet";
       setError(msg);
       return null;
@@ -53,6 +50,7 @@ export function useStellarWallet() {
   const disconnect = useCallback(() => {
     try {
       adapter.disconnect();
+      TransactionStorage.clear();
       setWallet(null);
       setError(null);
     } catch (err: any) {
@@ -66,7 +64,6 @@ export function useStellarWallet() {
       const signed = await adapter.signTransaction(xdr);
       return signed;
     } catch (err: any) {
-      // Surface error via state instead of throwing
       const msg = err instanceof Error ? err.message : "Failed to sign transaction";
       setError(msg);
       return null;
@@ -75,6 +72,7 @@ export function useStellarWallet() {
 
   return {
     wallet,
+    isConnected: wallet !== null,
     isConnecting,
     error,
     connect,
