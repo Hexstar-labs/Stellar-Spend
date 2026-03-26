@@ -1,221 +1,5 @@
 "use client";
 
-
-import { Skeleton } from "./ui/Skeleton";
-import { InputField } from "./ui/InputField";
-import { SelectField } from "./ui/SelectField";
-import { Field } from "./ui/Field";
-
-export interface FeeOption {
-  label: string;
-  amount: string;
-  method: "native" | "stablecoin";
-}
-
-export interface FormCardProps {
-  // values
-  amount: string;
-  currency: string;
-  bank: string;
-  accountNumber: string;
-  accountName: string;
-  feeMethod: "native" | "stablecoin";
-  quoteSuffix?: string;
-
-  // options
-  currencies: { value: string; label: string }[];
-  banks: { value: string; label: string }[];
-  feeOptions: FeeOption[];
-
-  // loading flags
-  isLoadingCurrencies?: boolean;
-  isLoadingBanks?: boolean;
-  isLoadingQuote?: boolean;
-  isLoadingFees?: boolean;
-  isVerifyingAccount?: boolean;
-
-  // connection state
-  isConnected: boolean;
-  isConnecting: boolean;
-  isInitiating?: boolean;
-
-  // callbacks
-  onAmountChange: (v: string) => void;
-  onCurrencyChange: (v: string) => void;
-  onBankChange: (v: string) => void;
-  onAccountNumberChange: (v: string) => void;
-  onFeeMethodChange: (m: "native" | "stablecoin") => void;
-  onSubmit: () => void;
-}
-
-export function FormCard({
-  amount,
-  currency,
-  bank,
-  accountNumber,
-  accountName,
-  feeMethod,
-  quoteSuffix,
-  currencies,
-  banks,
-  feeOptions,
-  isLoadingCurrencies = false,
-  isLoadingBanks = false,
-  isLoadingQuote = false,
-  isLoadingFees = false,
-  isVerifyingAccount = false,
-  isConnected,
-  isConnecting,
-  isInitiating = false,
-  onAmountChange,
-  onCurrencyChange,
-  onBankChange,
-  onAccountNumberChange,
-  onFeeMethodChange,
-  onSubmit,
-}: FormCardProps) {
-  const canSubmit =
-    isConnected &&
-    !isConnecting &&
-    !isInitiating &&
-    amount !== "" &&
-    parseFloat(amount) > 0 &&
-    currency !== "" &&
-    bank !== "" &&
-    accountNumber.length === 10 &&
-    accountName !== "";
-
-  const ctaLabel = !isConnected
-    ? "CONNECT WALLET"
-    : isConnecting
-    ? "WAITING FOR SIGNATURE..."
-    : isInitiating
-    ? "INITIATING OFFRAMP..."
-    : "INITIATE OFFRAMP →";
-
-  return (
-    <section
-      style={{
-        background: "var(--panel)",
-        border: "1px solid var(--line)",
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-      }}
-      aria-label="Offramp form"
-    >
-      {/* Amount + quote suffix */}
-      <InputField
-        label="AMOUNT (USDC)"
-        value={amount}
-        onChange={onAmountChange}
-        type="number"
-        min="0.7"
-        step="0.000001"
-        placeholder="0.00"
-        isLoadingSuffix={isLoadingQuote}
-        suffix={quoteSuffix}
-        disabled={!isConnected}
-      />
-
-      {/* Gas fee selector */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em" }}>
-          GAS FEE METHOD
-        </span>
-        <div style={{ display: "flex", gap: 8 }}>
-          {isLoadingFees ? (
-            <>
-              <Skeleton width={120} height={46} aria-label="Loading fee option…" />
-              <Skeleton width={120} height={46} aria-label="Loading fee option…" />
-            </>
-          ) : (
-            feeOptions.map((opt) => (
-              <button
-                key={opt.method}
-                onClick={() => onFeeMethodChange(opt.method)}
-                aria-pressed={feeMethod === opt.method}
-                style={{
-                  flex: 1,
-                  height: 46,
-                  border: `1px solid ${feeMethod === opt.method ? "var(--accent)" : "var(--line)"}`,
-                  background: feeMethod === opt.method ? "rgba(201,169,98,0.1)" : "none",
-                  color: feeMethod === opt.method ? "var(--accent)" : "var(--muted)",
-                  fontSize: 12,
-                  letterSpacing: "0.06em",
-                  cursor: "pointer",
-                  transition: "border-color 0.15s, background 0.15s, color 0.15s",
-                }}
-              >
-                {opt.label}
-                <br />
-                <span style={{ fontSize: 11, opacity: 0.8 }}>{opt.amount}</span>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Currency dropdown */}
-      <SelectField
-        label="CURRENCY"
-        value={currency}
-        onChange={onCurrencyChange}
-        options={currencies}
-        isLoading={isLoadingCurrencies}
-        placeholder="Select currency…"
-      />
-
-      {/* Account number */}
-      <InputField
-        label="ACCOUNT NUMBER"
-        value={accountNumber}
-        onChange={onAccountNumberChange}
-        placeholder="0000000000"
-        disabled={!isConnected}
-      />
-
-      {/* Bank dropdown */}
-      <SelectField
-        label="BANK"
-        value={bank}
-        onChange={onBankChange}
-        options={banks}
-        isLoading={isLoadingBanks}
-        disabled={currency === ""}
-        placeholder="Select bank…"
-      />
-
-      {/* Account name (read-only, auto-resolved) */}
-      <Field
-        label="ACCOUNT NAME"
-        value={accountName || undefined}
-        tone="accent"
-        isLoading={isVerifyingAccount}
-        loadingLabel="Verifying account…"
-      />
-
-      {/* CTA */}
-      <button
-        onClick={onSubmit}
-        disabled={!canSubmit}
-        style={{
-          height: 48,
-          background: canSubmit ? "var(--accent)" : "var(--line)",
-          color: canSubmit ? "#000" : "var(--muted)",
-          border: 0,
-          fontSize: 13,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          cursor: canSubmit ? "pointer" : "default",
-          transition: "background 0.15s, color 0.15s",
-        }}
-      >
-        {ctaLabel}
-      </button>
-    </section>
-
 import {
   useState,
   useEffect,
@@ -229,6 +13,12 @@ import { validateAmount, validateAccountNumber } from "@/lib/offramp/utils/valid
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+export interface FeeOption {
+  label: string;
+  amount: string;
+  method: "native" | "stablecoin";
+}
 
 export interface FormCardProps {
   /** Wallet state */
@@ -433,10 +223,6 @@ function Field({ label, value, loading, placeholder = "—" }: FieldProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Fee method selector
-// ---------------------------------------------------------------------------
-
 interface FeeMethodSelectorProps {
   value: FeeMethod;
   onChange: (v: FeeMethod) => void;
@@ -485,15 +271,6 @@ function FeeMethodSelector({ value, onChange, usdcFee, xlmFee, disabled }: FeeMe
   );
 }
 
-// ---------------------------------------------------------------------------
-// Estimated payout box
-// ---------------------------------------------------------------------------
-
-interface PayoutBoxProps {
-  quote: QuoteResult;
-  currency: string;
-}
-
 function formatPayout(amount: string, currency: string): string {
   const num = parseFloat(amount);
   if (isNaN(num)) return "—";
@@ -510,6 +287,11 @@ function formatPayout(amount: string, currency: string): string {
   } catch {
     return `${currency.toUpperCase()} ${num.toFixed(2)}`;
   }
+}
+
+interface PayoutBoxProps {
+  quote: QuoteResult;
+  currency: string;
 }
 
 function PayoutBox({ quote, currency }: PayoutBoxProps) {
@@ -530,10 +312,6 @@ function PayoutBox({ quote, currency }: PayoutBoxProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// CTA button
-// ---------------------------------------------------------------------------
-
 type CtaState = "disconnected" | "connecting" | "ready" | "submitting" | "invalid";
 
 function getCtaLabel(state: CtaState): string {
@@ -550,10 +328,6 @@ function getCtaDisabled(state: CtaState): boolean {
   return state === "connecting" || state === "submitting" || state === "invalid";
 }
 
-// ---------------------------------------------------------------------------
-// Main FormCard component
-// ---------------------------------------------------------------------------
-
 export default function FormCard({
   isConnected,
   isConnecting,
@@ -564,7 +338,6 @@ export default function FormCard({
   onAmountChange,
   onCurrencyChange,
 }: FormCardProps) {
-  // --- Form state ---
   const [amount, setAmount] = useState("");
   const [feeMethod, setFeeMethod] = useState<FeeMethod>("USDC");
   const [currency, setCurrency] = useState("");
@@ -572,12 +345,10 @@ export default function FormCard({
   const [institution, setInstitution] = useState("");
   const [accountName, setAccountName] = useState("");
 
-  // --- Remote data ---
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [quote, setQuote] = useState<QuoteResult | null>(null);
 
-  // --- Loading / error states ---
   const [isCurrenciesLoading, setIsCurrenciesLoading] = useState(false);
   const [isInstitutionsLoading, setIsInstitutionsLoading] = useState(false);
   const [isQuoteLoading, setIsQuoteLoading] = useState(false);
@@ -589,13 +360,9 @@ export default function FormCard({
   const [quoteError, setQuoteError] = useState("");
   const [verifyError, setVerifyError] = useState("");
 
-  // Debounce ref
   const quoteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verifyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ---------------------------------------------------------------------------
-  // Reset on resetKey change
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (resetKey === 0) return;
     setAmount("");
@@ -611,9 +378,6 @@ export default function FormCard({
     setVerifyError("");
   }, [resetKey]);
 
-  // ---------------------------------------------------------------------------
-  // Fetch currencies on mount
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     setIsCurrenciesLoading(true);
     fetch("/api/offramp/currencies")
@@ -625,9 +389,6 @@ export default function FormCard({
       .finally(() => setIsCurrenciesLoading(false));
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Fetch institutions when currency changes
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!currency) {
       setInstitutions([]);
@@ -646,9 +407,6 @@ export default function FormCard({
       .finally(() => setIsInstitutionsLoading(false));
   }, [currency]);
 
-  // ---------------------------------------------------------------------------
-  // Debounced quote fetch
-  // ---------------------------------------------------------------------------
   const fetchQuote = useCallback(
     (amt: string, cur: string, fee: FeeMethod) => {
       if (quoteDebounceRef.current) clearTimeout(quoteDebounceRef.current);
@@ -676,7 +434,6 @@ export default function FormCard({
           onQuoteChange?.(result);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : "Could not fetch quote";
-          // Only surface non-501 errors (501 = not yet implemented)
           if (!msg.includes("Not implemented")) setQuoteError(msg);
           setQuote(null);
           onQuoteChange?.(null);
@@ -688,9 +445,6 @@ export default function FormCard({
     [onQuoteChange]
   );
 
-  // ---------------------------------------------------------------------------
-  // Auto-verify account
-  // ---------------------------------------------------------------------------
   const verifyAccount = useCallback(
     (accNum: string, inst: string, cur: string) => {
       if (verifyDebounceRef.current) clearTimeout(verifyDebounceRef.current);
@@ -724,20 +478,15 @@ export default function FormCard({
     []
   );
 
-  // ---------------------------------------------------------------------------
-  // Field change handlers
-  // ---------------------------------------------------------------------------
   function handleAmountChange(val: string) {
     setAmount(val);
     onAmountChange?.(val);
-
     const num = parseFloat(val);
     if (val && (isNaN(num) || num < 0.7)) {
       setAmountError("Minimum amount is 0.7 USDC");
     } else {
       setAmountError("");
     }
-
     fetchQuote(val, currency, feeMethod);
   }
 
@@ -753,7 +502,6 @@ export default function FormCard({
   }
 
   function handleAccountNumberChange(val: string) {
-    // Only allow digits, max 10
     const digits = val.replace(/\D/g, "").slice(0, 10);
     setAccountNumber(digits);
     setAccountError(digits.length > 0 && digits.length < 10 ? "Account number must be 10 digits" : "");
@@ -766,9 +514,6 @@ export default function FormCard({
     verifyAccount(accountNumber, val, currency);
   }
 
-  // ---------------------------------------------------------------------------
-  // Form validity
-  // ---------------------------------------------------------------------------
   const isFormValid =
     isConnected &&
     validateAmount(amount) &&
@@ -781,9 +526,6 @@ export default function FormCard({
     !amountError &&
     !accountError;
 
-  // ---------------------------------------------------------------------------
-  // CTA state
-  // ---------------------------------------------------------------------------
   function getCtaState(): CtaState {
     if (!isConnected && !isConnecting) return "disconnected";
     if (isConnecting) return "connecting";
@@ -794,145 +536,100 @@ export default function FormCard({
 
   const ctaState = getCtaState();
 
-  // ---------------------------------------------------------------------------
-  // Submit
-  // ---------------------------------------------------------------------------
-  async function handleSubmit() {
-    if (!isConnected) { onConnect(); return; }
+  async function handleSubmitForm() {
     if (!isFormValid || !quote) return;
-
     setIsSubmitting(true);
     try {
-      await onSubmit({ amount, currency, institution, accountIdentifier: accountNumber, accountName, feeMethod, quote });
+      await onSubmit({
+        amount,
+        currency,
+        institution,
+        accountIdentifier: accountNumber,
+        accountName,
+        feeMethod,
+        quote,
+      });
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-  const currencyOptions = currencies.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }));
-  const institutionOptions = institutions.map((i) => ({ value: i.code, label: i.name }));
-
   return (
-    <div className="border border-[#333333] bg-[#111111] flex flex-col">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-[#333333]">
-        <h2 className="font-space-grotesk font-bold text-white text-base tracking-wide">
-          {isConnecting ? "CONNECTING WALLET" : isConnected ? "READY TO OFFRAMP" : "CONNECT WALLET"}
-        </h2>
-        <p className="text-[11px] text-[#777777] mt-1">
-          {isConnecting
-            ? "Waiting for wallet signature before opening the off-ramp form."
-            : isConnected
-            ? "Connected wallet detected. Confirm amount and settlement bank details."
-            : "Securely connect a Stellar-compatible wallet before entering payout details."}
-        </p>
-      </div>
-
-      {/* Form body */}
-      <div className="px-5 py-5 flex flex-col gap-5">
-        {/* Amount */}
+    <div className="flex flex-col gap-6">
+      <div className="bg-[#111111] border border-[#333333] p-6 flex flex-col gap-6">
         <InputField
-          label="USDC Amount"
-          id="usdc-amount"
-          type="number"
+          label="Amount (USDC)"
+          id="amount"
           value={amount}
           onChange={handleAmountChange}
+          type="number"
           placeholder="0.00"
-          min="0.7"
-          step="0.000001"
-          inputMode="decimal"
-          disabled={!isConnected}
-          suffix={isQuoteLoading ? "..." : quote ? `≈ ${formatPayout(quote.destinationAmount, currency)}` : "USDC"}
-          error={amountError}
+          suffix={isQuoteLoading ? "..." : "USDC"}
+          error={amountError || quoteError}
+          disabled={!isConnected || isSubmitting}
         />
 
-        {/* Gas fee method */}
         <FeeMethodSelector
           value={feeMethod}
           onChange={handleFeeMethodChange}
-          usdcFee={null}
-          xlmFee={null}
-          disabled={!isConnected}
+          usdcFee="~0.50 USDC"
+          xlmFee="~0.001 XLM"
+          disabled={!isConnected || isSubmitting}
         />
 
-        {/* Currency */}
-        <SelectField
-          label="Payout Currency"
-          id="payout-currency"
-          value={currency}
-          onChange={handleCurrencyChange}
-          options={currencyOptions}
-          placeholder="Select currency..."
-          disabled={!isConnected}
-          loading={isCurrenciesLoading}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SelectField
+            label="Currency"
+            id="currency"
+            value={currency}
+            options={currencies.map((c) => ({ value: c.code, label: `${c.name} (${c.code})` }))}
+            onChange={handleCurrencyChange}
+            loading={isCurrenciesLoading}
+            disabled={!isConnected || isSubmitting}
+          />
+          <SelectField
+            label="Bank / Institution"
+            id="institution"
+            value={institution}
+            options={institutions.map((i) => ({ value: i.code, label: i.name }))}
+            onChange={handleInstitutionChange}
+            loading={isInstitutionsLoading}
+            disabled={!currency || !isConnected || isSubmitting}
+            placeholder={currency ? "Select bank..." : "Select currency first"}
+          />
+        </div>
 
-        {/* Account number */}
         <InputField
           label="Account Number"
-          id="account-number"
+          id="accountNumber"
           value={accountNumber}
           onChange={handleAccountNumberChange}
-          placeholder="0000000000"
-          maxLength={10}
           inputMode="numeric"
-          disabled={!isConnected || !currency}
-          error={accountError}
+          placeholder="0000000000"
+          error={accountError || verifyError}
+          disabled={!institution || !isConnected || isSubmitting}
         />
 
-        {/* Bank / Institution */}
-        <SelectField
-          label="Bank / Institution"
-          id="institution"
-          value={institution}
-          onChange={handleInstitutionChange}
-          options={institutionOptions}
-          placeholder="Select bank..."
-          disabled={!isConnected || !currency}
-          loading={isInstitutionsLoading}
-        />
+        <Field label="Account Name" value={accountName} loading={isVerifyingAccount} />
 
-        {/* Account name (read-only, auto-resolved) */}
-        <Field
-          label="Account Name"
-          value={accountName}
-          loading={isVerifyingAccount}
-          placeholder="Auto-resolved after account number entry"
-        />
-        {verifyError && (
-          <span className="text-[10px] text-red-400 tracking-wide -mt-3">{verifyError}</span>
-        )}
+        {quote && <PayoutBox quote={quote} currency={currency} />}
 
-        {/* Estimated payout box */}
-        {quote && !isQuoteLoading && (
-          <PayoutBox quote={quote} currency={currency} />
-        )}
-        {quoteError && (
-          <span className="text-[10px] text-red-400 tracking-wide">{quoteError}</span>
-        )}
-
-        {/* CTA */}
         <button
-          type="button"
-          onClick={handleSubmit}
+          onClick={ctaState === "disconnected" ? onConnect : handleSubmitForm}
           disabled={getCtaDisabled(ctaState)}
           className={cn(
-            "w-full py-3 text-xs tracking-widest border transition-colors duration-150",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]",
+            "w-full py-4 text-xs font-bold tracking-[0.2em] transition-all duration-200",
             ctaState === "ready"
-              ? "border-[#c9a962] bg-[#c9a962] text-[#0a0a0a] hover:bg-[#b8943f]"
-              : ctaState === "disconnected"
-              ? "border-[#c9a962] bg-transparent text-[#c9a962] hover:bg-[#c9a962] hover:text-[#0a0a0a]"
-              : "border-[#333333] bg-transparent text-[#777777] cursor-not-allowed opacity-60"
+              ? "bg-[#c9a962] text-black hover:bg-[#d4b982]"
+              : "bg-[#222222] text-[#555555] cursor-not-allowed border border-[#333333]",
+            (ctaState === "connecting" || ctaState === "submitting") && "animate-pulse"
           )}
         >
           {getCtaLabel(ctaState)}
         </button>
       </div>
     </div>
-
   );
 }
