@@ -1,13 +1,18 @@
 import React from 'react';
+import { cn } from '@/lib/cn';
+import type { ProgressStep } from '@/types/stellaramp';
 
 type ProgressStepsProps = {
   isConnected: boolean;
   isConnecting: boolean;
+  /** Optional steps provided by useWalletFlow hook */
+  steps?: ReadonlyArray<ProgressStep>;
 };
 
 export default function ProgressSteps({
   isConnected,
   isConnecting,
+  steps: providedSteps,
 }: ProgressStepsProps) {
   // Determine active step based on rules:
   // Step 1 is active when wallet is not connected
@@ -15,18 +20,22 @@ export default function ProgressSteps({
   // Step 3 is active when wallet is connected and not connecting
   const activeStep = isConnecting ? 2 : (!isConnected ? 1 : 3);
 
-  const steps = [
+  // Fallback to internal steps if none provided (for safety/backward compatibility)
+  const steps = providedSteps || [
     {
+      id: 's1',
       number: '01',
       title: isConnected ? 'CONNECTED \u2713' : 'CONNECT WALLET',
       description: 'Connect your wallet to begin securely.',
     },
     {
+      id: 's2',
       number: '02',
       title: isConnecting ? 'SIGNATURE PENDING' : 'FX LOCK',
       description: 'Lock in exchange rate and sign transaction.',
     },
     {
+      id: 's3',
       number: '03',
       title: '\u20A6 PAYOUT',
       description: 'Receive payout directly into your account.',
@@ -42,37 +51,38 @@ export default function ProgressSteps({
 
           return (
             <div
-              key={step.number}
-              className={`flex flex-col justify-between p-6 rounded-lg transition-all duration-300 min-h-[160px] border ${
+              key={step.id || step.number}
+              className={cn(
+                "flex flex-col justify-between p-6 transition-all duration-300 min-h-[160px] border",
                 isActive
-                  ? 'bg-[var(--accent)] text-[#111111] shadow-lg scale-[1.02] border-transparent'
-                  : 'bg-[#111111] text-[#777777] border-[#333333]'
-              }`}
-              style={{
-                backgroundColor: isActive ? 'var(--accent, #D4AF37)' : '',
-              }}
+                  ? "bg-[#c9a962] text-[#111111] shadow-lg scale-[1.02] border-transparent"
+                  : "bg-[#111111] text-[#777777] border-[#333333]"
+              )}
             >
               <div className="flex flex-col">
                 <span
-                  className={`text-4xl font-black tracking-tighter mb-4 ${
-                    isActive ? 'text-[#111111]/40' : 'text-[#444444]'
-                  }`}
+                  className={cn(
+                    "text-4xl font-black tracking-tighter mb-4",
+                    isActive ? "text-[#111111]/40" : "text-[#444444]"
+                  )}
                 >
                   {step.number}
                 </span>
                 <h3
-                  className={`text-lg font-bold tracking-wide uppercase ${
-                    isActive ? 'text-[#111111]' : 'text-white'
-                  }`}
+                  className={cn(
+                    "text-lg font-bold tracking-wide uppercase",
+                    isActive ? "text-[#111111]" : "text-white"
+                  )}
                 >
                   {step.title}
                 </h3>
               </div>
               
               <p
-                className={`text-sm mt-3 font-medium ${
-                  isActive ? 'text-[#111111]/80' : 'text-[#777777]'
-                }`}
+                className={cn(
+                  "text-sm mt-3 font-medium leading-relaxed",
+                  isActive ? "text-[#111111]/80" : "text-[#777777]"
+                )}
               >
                 {step.description}
               </p>

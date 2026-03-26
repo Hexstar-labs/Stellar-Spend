@@ -1,6 +1,7 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from "react";
+
 import { cn } from "@/lib/cn";
 import { OfframpStep } from "@/types/stellaramp";
 
@@ -10,172 +11,194 @@ type TransactionProgressModalProps = {
   onClose: () => void;
 };
 
-const STEPS: { key: OfframpStep; label: string }[] = [
-  { key: "initiating", label: "Initiating Transaction" },
-  { key: "awaiting-signature", label: "Awaiting Signature" },
-  { key: "submitting", label: "Submitting to Network" },
-  { key: "processing", label: "Processing Payment" },
-  { key: "settling", label: "Settling Transaction" },
+const STEP_ORDER: OfframpStep[] = [
+  "initiating",
+  "awaiting-signature",
+  "submitting",
+  "processing",
+  "settling",
+  "success",
 ];
 
+const STEP_LABELS: Record<OfframpStep, string> = {
+  idle: "Idle",
+  initiating: "Initiating Transaction",
+  "awaiting-signature": "Awaiting Wallet Signature",
+  submitting: "Submitting to Network",
+  processing: "Processing On-Chain",
+  settling: "Settling Fiat Payout",
+  success: "Transaction Complete",
+  error: "Transaction Failed",
+};
+ main
 export function TransactionProgressModal({
   step,
   errorMessage,
   onClose,
 }: TransactionProgressModalProps) {
-  if (step === "idle") return null;
+  const [isVisible, setIsVisible] = useState(false);
 
-  const currentIndex = STEPS.findIndex((s) => s.key === step);
-  const isTerminal = step === "success" || step === "error";
-
-  const handleBackdropClick = () => {
-    if (isTerminal) {
-      onClose();
+  useEffect(() => {
+    if (step !== "idle") {
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
     }
-  };
+  }, [step]);
+
+  if (!isVisible || step === "idle") return null;
+
+  const isTerminal = step === "success" || step === "error";
+  const showCloseButton = isTerminal;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 transition-all duration-500"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className={cn(
-          "relative w-full max-w-md racing-border-wrapper rounded-2xl overflow-hidden shadow-2xl",
-          step === "success" && "scale-105",
-          step === "error" && "border-red-500/50"
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="racing-border-content p-8 rounded-[14px]">
-          {step === "success" ? (
-            <div className="flex flex-col items-center text-center animate-scale-in">
-              <div className="w-20 h-20 bg-[var(--accent)] rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(201,169,98,0.4)]">
-                <CheckIcon className="w-12 h-12 text-black stroke-[3px]" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2 tracking-tight">Transaction Successful</h2>
-              <p className="text-[#777777] mb-8 leading-relaxed">
-                Your payout has been processed and is on its way to your account.
-              </p>
-              <button
-                onClick={onClose}
-                className="w-full py-4 bg-[var(--accent)] text-black font-bold rounded-xl hover:opacity-90 transition-all active:scale-[0.98] tracking-widest uppercase text-sm"
-              >
-                Done
-              </button>
-            </div>
-          ) : step === "error" ? (
-            <div className="flex flex-col items-center text-center animate-scale-in">
-              <div className="w-20 h-20 bg-red-500/20 border border-red-500/50 rounded-full flex items-center justify-center mb-6">
-                <XIcon className="w-10 h-10 text-red-500 stroke-[3px]" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2 tracking-tight">Transaction Failed</h2>
-              <div className="max-w-full overflow-hidden break-words mb-8 px-2">
-                <p className="text-red-400/80 leading-relaxed text-sm">
-                  {errorMessage || "An unexpected error occurred during the transaction flow. Please try again or contact support if the issue persists."}
-                </p>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-full py-4 bg-[#222222] text-white border border-[#333333] font-bold rounded-xl hover:bg-[#282828] transition-all active:scale-[0.98] tracking-widest uppercase text-sm"
-              >
-                Close
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-8">
-               <div className="mb-2">
-                  <h3 className="text-lg font-bold tracking-tight mb-1">Transaction in Progress</h3>
-                  <p className="text-xs text-[#777777] uppercase tracking-[0.2em]">Please do not close this window</p>
-               </div>
-              
-              <div className="flex flex-col gap-6">
-                {STEPS.map((s, index) => {
-                  const isPast = index < currentIndex;
-                  const isCurrent = index === currentIndex;
-                  const isFuture = index > currentIndex;
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"
+        onClick={() => isTerminal && onClose()}
+      />
 
-                  return (
-                    <div
-                      key={s.key}
-                      className={cn(
-                        "flex items-center gap-4 transition-all duration-300",
-                        isFuture && "opacity-30 blur-[1px]",
-                        isCurrent && "font-bold text-white"
-                      )}
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
-                        {isPast ? (
-                          <div className="w-6 h-6 bg-[var(--accent)] rounded-full flex items-center justify-center animate-scale-in">
-                            <CheckIcon className="w-3.5 h-3.5 text-black stroke-[3px]" />
-                          </div>
-                        ) : isCurrent ? (
-                          <div className="relative">
-                            <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin-slow" />
-                          </div>
-                        ) : (
-                          <div className="w-2 h-2 bg-[#333333] rounded-full" />
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-col">
-                        <span className={cn(
-                           "text-sm tracking-wide transition-colors",
-                           isCurrent ? "text-white" : isPast ? "text-[rgba(201,169,98,0.8)]" : "text-[#555555]"
-                        )}>
-                          {s.label}
-                        </span>
-                        {isCurrent && (
-                           <div className="flex gap-1 mt-1">
-                              <div className="w-1 h-1 bg-[var(--accent)] rounded-full dot-bounce" style={{ animationDelay: '0ms' }} />
-                              <div className="w-1 h-1 bg-[var(--accent)] rounded-full dot-bounce" style={{ animationDelay: '200ms' }} />
-                              <div className="w-1 h-1 bg-[var(--accent)] rounded-full dot-bounce" style={{ animationDelay: '400ms' }} />
-                           </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      {/* Modal Container */}
+      <div 
+        className={cn(
+          "relative w-full max-w-md bg-[#0a0a0a] border border-[#333333] transition-all duration-500 overflow-hidden",
+          "shadow-[0_0_50px_rgba(201,169,98,0.15)]"
+        )}
+      >
+        {/* Racing Border Animation (Only during active steps) */}
+        {!isTerminal && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="racing-border" />
+          </div>
+        )}
+
+        <div className="relative p-8 flex flex-col items-center">
+          {/* Status Icon */}
+          <div className="mb-8 relative h-20 w-20 flex items-center justify-center">
+             {step === "success" ? (
+               <div className="h-16 w-16 rounded-full bg-green-500/20 border border-green-500 flex items-center justify-center animate-[scale-in_0.5s_ease-out]">
+                 <CheckIcon className="w-8 h-8 text-green-500" />
+               </div>
+             ) : step === "error" ? (
+               <div className="h-16 w-16 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center animate-[shake_0.5s_ease-in-out]">
+                 <XIcon className="w-8 h-8 text-red-500" />
+               </div>
+             ) : (
+               <div className="h-16 w-16 border-2 border-[#c9a962]/30 border-t-[#c9a962] rounded-full animate-spin" />
+             )}
+          </div>
+
+          <h2 className="text-xl font-bold text-white tracking-widest uppercase mb-2">
+            {step === "error" ? "ERROR" : step === "success" ? "SUCCESS" : "IN PROGRESS"}
+          </h2>
+          
+          <p className="text-xs text-[#777777] tracking-[0.2em] uppercase mb-8 text-center">
+            {STEP_LABELS[step]}
+          </p>
+
+          {/* Steps List */}
+          {!isTerminal && (
+            <div className="w-full flex flex-col gap-4">
+              {STEP_ORDER.filter(s => s !== "success").map((s, idx) => {
+                const stepIdx = STEP_ORDER.indexOf(step);
+                const currentIdx = idx;
+                const isCompleted = stepIdx > currentIdx;
+                const isActive = stepIdx === currentIdx;
+
+                return (
+                  <div key={s} className="flex items-center gap-4 transition-opacity duration-300">
+                    <div className={cn(
+                      "h-1.5 w-1.5 rounded-full transition-all duration-300",
+                      isCompleted ? "bg-green-500" : isActive ? "bg-[#c9a962] scale-125 shadow-[0_0_8px_var(--accent)]" : "bg-[#333333]"
+                    )} />
+                    <span className={cn(
+                      "text-[10px] tracking-[0.1em] uppercase",
+                      isCompleted ? "text-green-500/60" : isActive ? "text-white font-bold" : "text-[#444444]"
+                    )}>
+                      {STEP_LABELS[s]}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+          )}
+
+          {step === "error" && errorMessage && (
+            <div className="w-full mt-4 p-4 bg-red-500/10 border border-red-500/20">
+              <p className="text-[10px] text-red-400 font-mono break-words leading-relaxed text-center">
+                {errorMessage}
+              </p>
+            </div>
+          )}
+
+          {step === "success" && (
+            <p className="text-sm text-[#aaaaaa] text-center mb-6 leading-relaxed">
+              Funds have been sent to your bank account. <br />
+              Thank you for using Stellar-Spend.
+            </p>
+          )}
+
+          {showCloseButton && (
+            <button
+              onClick={onClose}
+              className="mt-4 w-full py-3 bg-[#c9a962] text-black text-xs font-bold tracking-[0.2em] hover:bg-[#d4b982] transition-colors"
+            >
+              DISMISS
+            </button>
           )}
         </div>
       </div>
+
+      <style jsx global>{`
+        @property --angle {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+
+        .racing-border {
+          position: absolute;
+          inset: -1px;
+          background: conic-gradient(from var(--angle), transparent 70%, #c9a962 100%);
+          animation: rotate-border 3s linear infinite;
+        }
+
+        @keyframes rotate-border {
+          to { --angle: 360deg; }
+        }
+
+        @keyframes scale-in {
+          from { transform: scale(0.8); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+      `}</style>
     </div>
   );
 }
 
+// Helper Components for clean SVG icons
 function CheckIcon({ className }: { className?: string }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polyline points="20 6 9 17 4 12" />
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
     </svg>
   );
 }
 
 function XIcon({ className }: { className?: string }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
     </svg>
+  );
+}
+ main
   );
 }
