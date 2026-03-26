@@ -1,25 +1,22 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-main
 import FormCard, { type OfframpPayload, type QuoteResult } from "@/components/FormCard";
 import RightPanel from "@/components/RightPanel";
 import RecentOfframpsTable from "@/components/RecentOfframpsTable";
 import ProgressSteps from "@/components/ProgressSteps";
-import Header from "@/components/Header";
 import { TransactionProgressModal } from "@/components/TransactionProgressModal";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { useStellarWallet } from "@/hooks/useStellarWallet";
 import { useWalletFlow } from "@/hooks/useWalletFlow";
- main
 import { OfframpStep } from "@/types/stellaramp";
-import { useStellarWallet } from "@/hooks/useStellarWallet";
+import { usePollPayoutStatus } from "@/hooks/usePollPayoutStatus";
 import { TransactionStorage, type Transaction } from "@/lib/transaction-storage";
 
 export default function Home() {
   const { wallet, isConnecting: isWalletConnecting, error, connect, disconnect } = useStellarWallet();
   const { state, variant, steps, setConnecting, setConnected, setPreConnect } = useWalletFlow();
-  
+
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
   const [quote, setQuote] = useState<QuoteResult | null>(null);
@@ -41,6 +38,8 @@ export default function Home() {
     }
   }, [isWalletConnecting, isConnected, setConnecting, setConnected, setPreConnect]);
 
+  const { pollPayoutStatus } = usePollPayoutStatus();
+
   const handleConnect = useCallback(async () => {
     try {
       await connect();
@@ -56,22 +55,70 @@ export default function Home() {
     setQuote(null);
   }, [disconnect]);
 
-  const handleSubmit = useCallback(async (_payload: OfframpPayload) => {
+  const handleSubmit = useCallback(async (payload: OfframpPayload) => {
     setModalStep("initiating");
-    const flow: OfframpStep[] = ["awaiting-signature", "submitting", "processing", "settling", "success"];
-    for (const step of flow) {
-      await new Promise((r) => setTimeout(r, 1500));
-      setModalStep(step);
+
+    // Create a local transaction record
+    const txId = TransactionStorage.generateId();
+    TransactionStorage.save({
+      id: txId,
+      timestamp: Date.now(),
+      userAddress: wallet?.publicKey ?? "unknown",
+      amount: payload.amount,
+      currency: payload.currency,
+      beneficiary: {
+        institution: payload.institution,
+        accountIdentifier: payload.accountIdentifier,
+        accountName: payload.accountName,
+        currency: payload.currency,
+      },
+      status: "pending",
+    });
+
+    try {
+      setModalStep("awaiting-signature");
+      await new Promise((r) => setTimeout(r, 800));
+      setModalStep("submitting");
+      await new Promise((r) => setTimeout(r, 800));
+      setModalStep("processing");
+
+      // TODO: replace with real orderId from execute-payout once implemented
+      const orderId: string | undefined = (payload as OfframpPayload & { orderId?: string }).orderId;
+
+      if (orderId) {
+        TransactionStorage.update(txId, { payoutOrderId: orderId });
+
+        await pollPayoutStatus(orderId, {
+          transactionId: txId,
+          onSettling: () => setModalStep("settling"),
+        });
+
+        TransactionStorage.update(txId, { status: "completed", payoutStatus: "settled" });
+        setModalStep("success");
+      } else {
+        // No orderId yet — simulate settling for UI demo until execute-payout is wired
+        setModalStep("settling");
+        await new Promise((r) => setTimeout(r, 1200));
+        setModalStep("success");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Transaction failed";
+      TransactionStorage.update(txId, { status: "failed", error: message });
+      setModalStep("error");
+      setModalError(message);
     }
-  }, [wallet?.publicKey]);
+  }, [pollPayoutStatus, wallet?.publicKey]);
+
+  const userTransactions = wallet?.publicKey
+    ? TransactionStorage.getByUser(wallet.publicKey)
+    : [];
 
   return (
     <main className="min-h-screen p-4 bg-[#0a0a0a]">
-      <TransactionProgressModal 
-        step={modalStep} 
-        errorMessage={error || undefined}
- main
-        onClose={() => setModalStep("idle")} 
+      <TransactionProgressModal
+        step={modalStep}
+        errorMessage={modalError}
+        onClose={() => { setModalStep("idle"); setModalError(undefined); }}
       />
 
       <Header
@@ -83,7 +130,7 @@ export default function Home() {
         onDisconnect={handleDisconnect}
       />
 
-      {walletError && (
+      {error && (
         <div
           role="alert"
           style={{
@@ -97,7 +144,7 @@ export default function Home() {
             letterSpacing: "0.02em",
           }}
         >
-          {walletError}
+          {error}
         </div>
       )}
 
@@ -114,7 +161,7 @@ export default function Home() {
               onCurrencyChange={setCurrency}
             />
           </div>
-          
+
           <div
             data-testid="RightPanel"
             className="col-start-2 row-start-1 row-span-2 max-[1100px]:col-start-1 max-[1100px]:row-span-1"
@@ -129,18 +176,17 @@ export default function Home() {
               onConnect={handleConnect}
             />
           </div>
-          
+
           <div>
             <RecentOfframpsTable userTransactions={userTransactions} />
           </div>
           <div className="col-span-1 min-[1101px]:col-span-2 mt-4 max-[1100px]:block">
             {/* The ProgressSteps component now consumes the memoized steps from useWalletFlow */}
-            <ProgressSteps 
-              isConnected={isConnected} 
-              isConnecting={isWalletConnecting} 
-              steps={steps} 
+            <ProgressSteps
+              isConnected={isConnected}
+              isConnecting={isWalletConnecting}
+              steps={steps}
             />
- main
           </div>
         </div>
       </section>

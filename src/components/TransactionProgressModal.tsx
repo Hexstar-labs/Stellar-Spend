@@ -199,6 +199,3 @@ function XIcon({ className }: { className?: string }) {
     </svg>
   );
 }
- main
-  );
-}
