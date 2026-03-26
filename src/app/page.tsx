@@ -34,7 +34,7 @@ export default function Home() {
     } else {
       setPreConnect();
     }
-  }, [isWalletConnecting, isConnected, setConnecting, setConnected, setPreConnect]);
+  }, [isWalletConnecting, setConnecting, setConnected, setPreConnect]);
 
   const { pollPayoutStatus } = usePollPayoutStatus();
 
