@@ -30,7 +30,6 @@ const STEP_LABELS: Record<OfframpStep, string> = {
   success: "Transaction Complete",
   error: "Transaction Failed",
 };
- main
 export function TransactionProgressModal({
   step,
   errorMessage,

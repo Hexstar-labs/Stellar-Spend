@@ -14,7 +14,7 @@ import { usePollPayoutStatus } from "@/hooks/usePollPayoutStatus";
 import { TransactionStorage, type Transaction } from "@/lib/transaction-storage";
 
 export default function Home() {
-  const { wallet, isConnecting: isWalletConnecting, error, connect, disconnect } = useStellarWallet();
+  const { wallet, isConnected, isConnecting: isWalletConnecting, error, connect, disconnect } = useStellarWallet();
   const { state, variant, steps, setConnecting, setConnected, setPreConnect } = useWalletFlow();
 
   const [amount, setAmount] = useState("");
@@ -34,7 +34,7 @@ export default function Home() {
     } else {
       setPreConnect();
     }
-  }, [isWalletConnecting, setConnecting, setConnected, setPreConnect]);
+  }, [isWalletConnecting, isConnected, setConnecting, setConnected, setPreConnect]);
 
   const { pollPayoutStatus } = usePollPayoutStatus();
 
