@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import FormCard, { type OfframpPayload } from "@/components/FormCard";
-import { useState, useCallback, useEffect } from "react";
-import FormCard, { type OfframpPayload, type QuoteResult } from "@/components/FormCard";
+import type { QuoteResult } from "@/components/FormCard";
 import RightPanel from "@/components/RightPanel";
 import RecentOfframpsTable from "@/components/RecentOfframpsTable";
 import ProgressSteps from "@/components/ProgressSteps";
@@ -15,21 +14,10 @@ import { usePollPayoutStatus } from "@/hooks/usePollPayoutStatus";
 import { TransactionStorage } from "@/lib/transaction-storage";
 import { withTimeout } from "@/lib/offramp/utils/timeout";
 import type { OfframpStep } from "@/types/stellaramp";
-import type { QuoteResult } from "@/components/FormCard";
 
 export default function Home() {
   const { wallet, isConnected, isConnecting, connect, disconnect, signTransaction } =
     useStellarWallet();
-import { Header } from "@/components/Header";
-import { useStellarWallet } from "@/hooks/useStellarWallet";
-import { useWalletFlow } from "@/hooks/useWalletFlow";
-import { OfframpStep } from "@/types/stellaramp";
-import { usePollPayoutStatus } from "@/hooks/usePollPayoutStatus";
-import { TransactionStorage } from "@/lib/transaction-storage";
-
-export default function Home() {
-  const { wallet, isConnected, isConnecting: isWalletConnecting, error, connect, disconnect } = useStellarWallet();
-  const { state, variant, steps, setConnecting, setConnected, setPreConnect } = useWalletFlow();
 
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("");
@@ -179,8 +167,6 @@ export default function Home() {
           "Bridge submit"
         );
 
-  const { pollPayoutStatus } = usePollPayoutStatus();
-
         if (submitRes.error) throw new Error(submitRes.error);
 
         let txHash: string = submitRes.hash;
@@ -260,86 +246,6 @@ export default function Home() {
     setQuote(null);
   }, [disconnect]);
 
-  const handleSubmit = useCallback(async (payload: OfframpPayload) => {
-    setModalStep("initiating");
-
-    // Create a local transaction record
-    const txId = TransactionStorage.generateId();
-    TransactionStorage.save({
-      id: txId,
-      timestamp: Date.now(),
-      userAddress: wallet?.publicKey ?? "unknown",
-      amount: payload.amount,
-      currency: payload.currency,
-      beneficiary: {
-        institution: payload.institution,
-        accountIdentifier: payload.accountIdentifier,
-        accountName: payload.accountName,
-        currency: payload.currency,
-      },
-      status: "pending",
-    });
-
-  const { pollPayoutStatus } = usePollPayoutStatus();
-
-  const handleSubmit = useCallback(async (payload: OfframpPayload) => {
-    setModalStep("initiating");
-
-    // Create a local transaction record
-    const txId = TransactionStorage.generateId();
-    TransactionStorage.save({
-      id: txId,
-      timestamp: Date.now(),
-      userAddress: "unknown", // replaced once wallet is wired
-      amount: payload.amount,
-      currency: payload.currency,
-      beneficiary: {
-        institution: payload.institution,
-        accountIdentifier: payload.accountIdentifier,
-        accountName: payload.accountName,
-        currency: payload.currency,
-      },
-      status: "pending",
-    });
-
-    try {
-      // Step: awaiting-signature → submitting → processing
-      // These steps will be driven by the real bridge/payout flow once those
-      // routes are implemented. For now we advance through them and then poll.
-      setModalStep("awaiting-signature");
-      await new Promise(r => setTimeout(r, 800));
-      setModalStep("submitting");
-      await new Promise(r => setTimeout(r, 800));
-      setModalStep("processing");
-
-      // TODO: replace with real orderId from execute-payout once implemented
-      // For now we read it from the payload if available, or skip polling.
-      const orderId: string | undefined = (payload as OfframpPayload & { orderId?: string }).orderId;
-
-      if (orderId) {
-        TransactionStorage.update(txId, { payoutOrderId: orderId });
-
-        await pollPayoutStatus(orderId, {
-          transactionId: txId,
-          onSettling: () => setModalStep("settling"),
-        });
-
-        TransactionStorage.update(txId, { status: "completed", payoutStatus: "settled" });
-        setModalStep("success");
-      } else {
-        // No orderId yet — simulate settling for UI demo until execute-payout is wired
-        setModalStep("settling");
-        await new Promise(r => setTimeout(r, 1200));
-        setModalStep("success");
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Transaction failed";
-      TransactionStorage.update(txId, { status: "failed", error: message });
-      setModalStep("error");
-      setModalError(message);
-    }
-  }, [pollPayoutStatus]);
-
   return (
     <main className="min-h-screen p-4 bg-[#0a0a0a]">
       <TransactionProgressModal 
@@ -349,31 +255,13 @@ export default function Home() {
       />
 
       <Header
-        subtitle={variant.subtitle}
+        subtitle="Convert Stellar USDC to fiat"
         isConnected={isConnected}
         isConnecting={isConnecting}
         walletAddress={wallet?.publicKey}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
       />
-
-      {error && (
-        <div
-          role="alert"
-          style={{
-            margin: "12px 0",
-            padding: "12px 16px",
-            background: "rgba(239,68,68,0.1)",
-            border: "1px solid rgba(239,68,68,0.4)",
-            borderRadius: 8,
-            color: "#f87171",
-            fontSize: 13,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {error}
-        </div>
-      )}
 
       <section className="border border-[#333333] px-[2.6rem] py-8 max-[1100px]:p-4 overflow-hidden mt-6">
         <div className="grid grid-cols-[1fr_370px] gap-6 max-[1100px]:grid-cols-1 overflow-hidden w-full">
@@ -396,7 +284,7 @@ export default function Home() {
           >
             <RightPanel
               isConnected={isConnected}
-              isConnecting={isWalletConnecting}
+              isConnecting={isConnecting}
               amount={amount}
               quote={quote}
               isLoadingQuote={false}
@@ -412,8 +300,8 @@ export default function Home() {
           <div className="col-span-1 min-[1101px]:col-span-2 mt-4">
             <ProgressSteps
               isConnected={isConnected}
-              isConnecting={isWalletConnecting}
-              steps={steps}
+              isConnecting={isConnecting}
+              steps={[]}
             />
           </div>
         </div>
