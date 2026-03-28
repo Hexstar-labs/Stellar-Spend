@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ErrorHandler } from '@/lib/error-handler';
 
 const PAYCREST_API_URL = process.env.PAYCREST_API_URL || 'https://api.paycrest.io/v1';
 
@@ -20,10 +21,7 @@ export async function POST(request: Request) {
     const { institution, accountIdentifier, currency = 'NGN' } = body;
 
     if (!institution || !accountIdentifier) {
-      return NextResponse.json(
-        { error: 'Institution and account identifier are required' },
-        { status: 400 }
-      );
+      return ErrorHandler.validation('Institution and account identifier are required', 'institution');
     }
 
     const apiKey = process.env.PAYCREST_API_KEY;
@@ -82,11 +80,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error verifying account via Paycrest:', error);
-    // Return empty account name for invalid accounts (not an error toast)
-    return NextResponse.json({
-      accountName: '',
-      valid: false,
-      message: 'Account verification failed',
-    });
+    return ErrorHandler.handle(error);
   }
 }

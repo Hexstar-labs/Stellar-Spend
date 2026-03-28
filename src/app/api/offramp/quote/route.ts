@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { validateAmount } from '@/lib/offramp/utils/validation';
 import { fetchPaycrestQuote, buildQuote, calculateBridgeAmount } from '@/lib/offramp/utils/quote-fetcher';
+import { ErrorHandler } from '@/lib/error-handler';
 
 // Stablecoin fee in USDC (example: 0.5 USDC)
 const STABLECOIN_FEE = '0.5';
@@ -42,24 +43,15 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!validateAmount(amount)) {
-      return NextResponse.json(
-        { error: 'Invalid amount: must be a positive number' },
-        { status: 400 }
-      );
+      return ErrorHandler.validation('Invalid amount: must be a positive number', 'amount');
     }
 
     if (!currency || typeof currency !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid currency' },
-        { status: 400 }
-      );
+      return ErrorHandler.validation('Invalid currency', 'currency');
     }
 
     if (!['native', 'stablecoin'].includes(feeMethod)) {
-      return NextResponse.json(
-        { error: 'Invalid feeMethod: must be "native" or "stablecoin"' },
-        { status: 400 }
-      );
+      return ErrorHandler.validation('Invalid feeMethod: must be "native" or "stablecoin"', 'feeMethod');
     }
 
     // Calculate bridge amount based on fee method
@@ -135,24 +127,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(quote);
   } catch (error) {
     console.error('Quote fetch error:', error);
-
-    const message = error instanceof Error ? error.message : 'Unknown error';
-
-    // Return appropriate error response
-    if (message.includes('Invalid')) {
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-
-    if (message.includes('Paycrest')) {
-      return NextResponse.json(
-        { error: 'Failed to fetch exchange rate' },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to generate quote' },
-      { status: 500 }
-    );
+    return ErrorHandler.handle(error);
   }
 }
