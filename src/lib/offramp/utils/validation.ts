@@ -26,19 +26,52 @@ export function validateToken(token: string): boolean {
   return ['USDC', 'USDT'].includes(token.toUpperCase());
 }
 
-export function isValidQuote(quote: unknown): boolean {
-  if (!quote || typeof quote !== 'object') return false;
+export function isValidQuote(data: unknown): data is {
+  destinationAmount: string;
+  rate: number;
+  currency: string;
+  bridgeFee: string;
+  payoutFee: string;
+  estimatedTime: number;
+} {
+  if (!data || typeof data !== 'object') return false;
   
-  const q = quote as Record<string, unknown>;
-  const destAmount = parseFloat(String(q.destinationAmount ?? ''));
-  const rate = typeof q.rate === 'number' ? q.rate : 0;
+  const q = data as Record<string, unknown>;
   
-  return (
-    !isNaN(destAmount) &&
-    isFinite(destAmount) &&
-    destAmount > 0 &&
-    !isNaN(rate) &&
-    isFinite(rate) &&
-    rate > 0
-  );
+  // Check all required fields exist
+  if (
+    typeof q.destinationAmount !== 'string' ||
+    typeof q.rate !== 'number' ||
+    typeof q.currency !== 'string' ||
+    typeof q.bridgeFee !== 'string' ||
+    typeof q.payoutFee !== 'string' ||
+    typeof q.estimatedTime !== 'number'
+  ) {
+    return false;
+  }
+  
+  // Validate numeric fields are finite and positive
+  const rate = q.rate as number;
+  const estimatedTime = q.estimatedTime as number;
+  
+  if (!isFinite(rate) || rate <= 0) return false;
+  if (!isFinite(estimatedTime) || estimatedTime < 0) return false;
+  
+  // Validate string amounts are non-empty
+  const destAmount = q.destinationAmount as string;
+  const bridgeFee = q.bridgeFee as string;
+  const payoutFee = q.payoutFee as string;
+  
+  if (!destAmount.trim() || !bridgeFee.trim() || !payoutFee.trim()) return false;
+  
+  // Validate amounts are valid numbers
+  const destNum = parseFloat(destAmount);
+  const bridgeNum = parseFloat(bridgeFee);
+  const payoutNum = parseFloat(payoutFee);
+  
+  if (!isFinite(destNum) || destNum <= 0) return false;
+  if (!isFinite(bridgeNum) || bridgeNum < 0) return false;
+  if (!isFinite(payoutNum) || payoutNum < 0) return false;
+  
+  return true;
 }
