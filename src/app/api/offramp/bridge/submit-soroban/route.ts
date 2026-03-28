@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { decodeTxResultXdr, extractErrorMessage } from '@/lib/offramp/utils/errors';
 
-// POST /api/offramp/bridge/submit-soroban
-// Submits a signed Stellar XDR transaction to the Soroban RPC.
+export const maxDuration = 15;
+
+/**
+ * POST /api/offramp/bridge/submit-soroban
+ * 
+ * Submits a signed Stellar XDR transaction to the Soroban RPC.
+ * 
+ * Request body:
+ * {
+ *   signedXdr: string (signed transaction XDR)
+ * }
+ * 
+ * Response:
+ * {
+ *   status: 'PENDING' | 'SUCCESS' | 'ERROR'
+ *   hash: string
+ *   error?: string (only if status is ERROR)
+ * }
+ */
 export async function POST(req: NextRequest) {
   try {
     const { signedXdr } = await req.json();
@@ -33,12 +51,41 @@ export async function POST(req: NextRequest) {
     }
 
     const result = data.result;
-    return NextResponse.json({
-      status: result?.status ?? 'PENDING',
-      hash: result?.hash,
-    });
+    const status = result?.status ?? 'PENDING';
+    const hash = result?.hash;
+
+    // Handle different statuses
+    if (status === 'PENDING') {
+      return NextResponse.json({ status: 'PENDING', hash });
+    }
+
+    if (status === 'SUCCESS') {
+      return NextResponse.json({ status: 'SUCCESS', hash });
+    }
+
+    if (status === 'DUPLICATE') {
+      return NextResponse.json({ status: 'PENDING', hash });
+    }
+
+    if (status === 'ERROR' || status === 'TRY_AGAIN_LATER') {
+      // Decode error result XDR
+      const errorMessage = decodeTxResultXdr(result?.errorResultXdr);
+      
+      // Log diagnostic events on error
+      if (result?.diagnosticEventsXdr) {
+        console.error('Diagnostic events:', result.diagnosticEventsXdr);
+      }
+
+      return NextResponse.json(
+        { error: errorMessage || 'Transaction failed' },
+        { status: 400 }
+      );
+    }
+
+    // Default response for unknown status
+    return NextResponse.json({ status: status || 'PENDING', hash });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal server error';
+    const message = extractErrorMessage(err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
