@@ -101,6 +101,52 @@ npm run dev
 
 Open `http://localhost:3001`.
 
+## Docker Deployment
+
+### Build and run
+
+```bash
+# Build the image
+docker build -t stellar-spend .
+
+# Run with env file
+docker run -p 3000:3000 --env-file .env.local stellar-spend
+```
+
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+App will be available at `http://localhost:3000`.
+
+> Environment variables are passed via `--env-file .env.local` (or the `env_file` key in `docker-compose.yml`). Copy `.env.example` to `.env.local` and fill in the values before running.
+
+## Vercel Deployment
+
+1. Import the repo in the [Vercel dashboard](https://vercel.com/new).
+2. Set the following environment variables in **Project → Settings → Environment Variables**:
+
+| Variable | Required |
+|---|---|
+| `PAYCREST_API_KEY` | ✅ |
+| `PAYCREST_WEBHOOK_SECRET` | ✅ |
+| `BASE_PRIVATE_KEY` | ✅ |
+| `BASE_RETURN_ADDRESS` | ✅ |
+| `BASE_RPC_URL` | ✅ |
+| `STELLAR_SOROBAN_RPC_URL` | ✅ |
+| `STELLAR_HORIZON_URL` | ✅ |
+| `NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL` | ✅ |
+| `NEXT_PUBLIC_BASE_RETURN_ADDRESS` | ✅ |
+| `NEXT_PUBLIC_STELLAR_USDC_ISSUER` | ✅ |
+
+3. Build command: `npm run build` — Output directory: `.next`
+4. `NODE_ENV=production` is set automatically by Vercel.
+5. PR preview deployments are enabled by default.
+
+Function timeouts for long-running routes are configured in `vercel.json`.
+
 ## Storage
 
 Transaction history is stored in browser `localStorage` (no database required).
