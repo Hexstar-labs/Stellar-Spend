@@ -82,6 +82,38 @@ describe('PaycrestAdapter.getInstitutions', () => {
   });
 });
 
+describe('PaycrestAdapter.verifyAccount', () => {
+  it('returns account name for valid GTBank account (accountName field)', async () => {
+    mockFetch({ data: { accountName: 'John Doe' } });
+    const name = await adapter.verifyAccount('GTB', '0123456789');
+    expect(name).toBe('John Doe');
+  });
+
+  it('returns account name when response has top-level accountName', async () => {
+    mockFetch({ accountName: 'Jane Smith' });
+    const name = await adapter.verifyAccount('GTB', '0123456789');
+    expect(name).toBe('Jane Smith');
+  });
+
+  it('returns empty string for invalid account (non-ok response)', async () => {
+    mockFetch({ message: 'Account not found' }, false, 400);
+    const name = await adapter.verifyAccount('GTB', '0000000000');
+    expect(name).toBe('');
+  });
+
+  it('POSTs to /sender/verify-account with institution and accountIdentifier', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data: { accountName: 'John Doe' } }),
+    });
+    vi.stubGlobal('fetch', spy);
+    await adapter.verifyAccount('GTB', '0123456789');
+    expect(spy.mock.calls[0][0]).toContain('/sender/verify-account');
+    expect(JSON.parse(spy.mock.calls[0][1].body)).toEqual({ institution: 'GTB', accountIdentifier: '0123456789' });
+  });
+});
+
 describe('PaycrestAdapter.getRate', () => {
   it('returns a valid NGN/USDC rate when data is a number', async () => {
     mockFetch({ data: 1580.5 });
