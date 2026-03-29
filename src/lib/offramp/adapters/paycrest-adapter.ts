@@ -108,11 +108,15 @@ export class PaycrestAdapter implements PayoutProviderAdapter {
   }
 
   async verifyAccount(institution: string, accountIdentifier: string): Promise<string> {
-    const response = await this.fetch('/sender/verify-account', {
-      method: 'POST',
-      body: JSON.stringify({ institution, accountIdentifier }),
-    });
-    return response.accountName;
+    try {
+      const response = await this.fetch('/sender/verify-account', {
+        method: 'POST',
+        body: JSON.stringify({ institution, accountIdentifier }),
+      });
+      return response?.accountName || response?.data || '';
+    } catch {
+      return '';
+    }
   }
 
   async getRate(
