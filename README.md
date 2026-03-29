@@ -101,6 +101,21 @@ npm run dev
 
 Open `http://localhost:3001`.
 
+## Bundle Size
+
+Run bundle analysis locally:
+
+```bash
+npm run build:analyze
+```
+
+This opens an interactive treemap of all chunks. The CI build fails if the `.next` output exceeds **150 MB**.
+
+Key large dependencies (expected):
+- `@stellar/stellar-sdk` — Stellar protocol primitives
+- `@allbridge/bridge-core-sdk` — cross-chain bridge logic
+- `viem` — Base chain interaction
+
 ## Storage
 
 Transaction history is stored in browser `localStorage` (no database required).
