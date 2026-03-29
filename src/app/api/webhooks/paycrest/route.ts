@@ -1,19 +1,8 @@
 import { NextResponse } from 'next/server';
 import { env } from '@/lib/env';
-import type { PayoutStatus } from '@/lib/offramp/types';
+import { mapPaycrestStatus } from '@/lib/offramp/adapters/paycrest-adapter';
 
 export const maxDuration = 10;
-
-function mapPaycrestStatus(eventType: string): PayoutStatus | null {
-  switch (eventType) {
-    case 'payment_order.pending':      return 'pending';
-    case 'payment_order.validated':    return 'validated';
-    case 'payment_order.settled':      return 'settled';
-    case 'payment_order.refunded':     return 'refunded';
-    case 'payment_order.expired':      return 'expired';
-    default:                           return null;
-  }
-}
 
 async function verifySignature(rawBody: string, signature: string, secret: string): Promise<boolean> {
   const encoder = new TextEncoder();
@@ -48,9 +37,10 @@ export async function POST(request: Request) {
     const payload = JSON.parse(rawBody);
     const { event, data } = payload;
     const payoutOrderId: string = data?.id ?? data?.orderId ?? '';
+    const knownEvent = event in { 'payment_order.pending': 1, 'payment_order.validated': 1, 'payment_order.settled': 1, 'payment_order.refunded': 1, 'payment_order.expired': 1 };
     const status = mapPaycrestStatus(event);
 
-    if (status && payoutOrderId) {
+    if (payoutOrderId && knownEvent) {
       console.log(`Order ${payoutOrderId} status → ${status}`);
     } else {
       console.warn(`Paycrest webhook: unhandled event "${event}" for order "${payoutOrderId}"`);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PaycrestAdapter, PaycrestHttpError } from '../lib/offramp/adapters/paycrest-adapter';
+import { PaycrestAdapter, PaycrestHttpError, mapPaycrestStatus } from '../lib/offramp/adapters/paycrest-adapter';
 
 const adapter = new PaycrestAdapter('test-api-key');
 
@@ -16,6 +16,23 @@ function mockFetch(data: unknown, ok = true, status = 200) {
 }
 
 beforeEach(() => vi.restoreAllMocks());
+
+describe('mapPaycrestStatus', () => {
+  it.each([
+    ['payment_order.pending',   'pending'],
+    ['payment_order.validated', 'validated'],
+    ['payment_order.settled',   'settled'],
+    ['payment_order.refunded',  'refunded'],
+    ['payment_order.expired',   'expired'],
+  ])('%s → %s', (input, expected) => {
+    expect(mapPaycrestStatus(input)).toBe(expected);
+  });
+
+  it('defaults to "pending" for unknown event', () => {
+    expect(mapPaycrestStatus('payment_order.unknown')).toBe('pending');
+    expect(mapPaycrestStatus('')).toBe('pending');
+  });
+});
 
 describe('PaycrestAdapter.getCurrencies', () => {
   it('returns array of { code, name, symbol }', async () => {

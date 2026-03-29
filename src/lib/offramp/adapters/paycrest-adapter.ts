@@ -5,6 +5,18 @@ import type {
 } from '../types';
 import { PayoutProviderAdapter } from './payout-provider';
 
+const PAYCREST_STATUS_MAP: Record<string, PayoutStatus> = {
+  'payment_order.pending':   'pending',
+  'payment_order.validated': 'validated',
+  'payment_order.settled':   'settled',
+  'payment_order.refunded':  'refunded',
+  'payment_order.expired':   'expired',
+};
+
+export function mapPaycrestStatus(webhookStatus: string): PayoutStatus {
+  return PAYCREST_STATUS_MAP[webhookStatus] ?? 'pending';
+}
+
 export class PaycrestHttpError extends Error {
   constructor(
     public message: string,
