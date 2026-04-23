@@ -3,6 +3,7 @@
 import { cn } from "@/lib/cn";
 import type { RecentOfframpRow } from "@/types/stellaramp";
 import { CopyButton } from "./CopyButton";
+import { TransactionTableSkeleton } from "./skeletons";
 
 // ---------------------------------------------------------------------------
 // Mock data — replaced by real TransactionStorage rows when wired up
@@ -20,6 +21,7 @@ const MOCK_ROWS: RecentOfframpRow[] = [
 
 export interface RecentOfframpsTableProps {
   rows?: ReadonlyArray<RecentOfframpRow>;
+  isLoading?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,7 +59,11 @@ function StatusBadge({ status }: { status: RecentOfframpRow["status"] }) {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RecentOfframpsTable({ rows = MOCK_ROWS }: RecentOfframpsTableProps) {
+export default function RecentOfframpsTable({ rows = MOCK_ROWS, isLoading }: RecentOfframpsTableProps) {
+  if (isLoading) {
+    return <TransactionTableSkeleton rows={3} />;
+  }
+
   return (
     <div
       data-testid="RecentOfframpsTable"

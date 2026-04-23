@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { QuoteDisplaySkeleton } from "./skeletons";
 
 export interface RightPanelProps {
   isConnected: boolean;
@@ -192,6 +193,11 @@ function BreakdownRow({ label, value, muted }: BreakdownRowProps) {
 
 export default function RightPanel(props: RightPanelProps) {
   const { quote, isConnected, isLoadingQuote, currency } = props;
+
+  // Show full skeleton when loading quote for the first time (no prior quote)
+  if (isLoadingQuote && !quote) {
+    return <QuoteDisplaySkeleton />;
+  }
 
   const platformFeeUsdc =
     quote && parseFloat(props.amount) > 0
