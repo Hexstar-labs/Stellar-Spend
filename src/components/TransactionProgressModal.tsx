@@ -151,35 +151,20 @@ export function TransactionProgressModal({
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="h-0.5 w-full bg-[#1a1a1a]">
-          <div
-            className={cn(
-              "h-full transition-all duration-700 ease-out",
-              isError ? "bg-red-500" : "bg-[#c9a962]"
-            )}
-            style={{ width: `${pct}%` }}
-            role="progressbar"
-            aria-valuenow={pct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </div>
-
-        <div className="relative p-8 flex flex-col items-center">
-          {/* Status icon */}
-          <div className="mb-6 h-20 w-20 flex items-center justify-center">
-            {step === "success" ? (
-              <div className="h-16 w-16 rounded-full bg-green-500/20 border border-green-500 flex items-center justify-center animate-scale-in">
-                <CheckIcon className="w-8 h-8 text-green-500" />
-              </div>
-            ) : isError ? (
-              <div className="h-16 w-16 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center icon-shake">
-                <XIcon className="w-8 h-8 text-red-500" />
-              </div>
-            ) : (
-              <div className="h-16 w-16 border-2 border-[#c9a962]/30 border-t-[#c9a962] rounded-full animate-spin" />
-            )}
+        <div className="relative p-4 sm:p-8 flex flex-col items-center">
+          {/* Status Icon */}
+          <div className="mb-8 relative h-20 w-20 flex items-center justify-center">
+             {step === "success" ? (
+               <div className="h-16 w-16 rounded-full bg-green-500/20 border border-green-500 flex items-center justify-center animate-[scale-in_0.5s_ease-out]">
+                 <CheckIcon className="w-8 h-8 text-green-500" />
+               </div>
+             ) : step === "error" ? (
+               <div className="h-16 w-16 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center animate-[shake_0.5s_ease-in-out]">
+                 <XIcon className="w-8 h-8 text-red-500" />
+               </div>
+             ) : (
+               <div className="h-16 w-16 border-2 border-[#c9a962]/30 border-t-[#c9a962] rounded-full animate-spin" />
+             )}
           </div>
 
           {/* Title */}

@@ -79,7 +79,7 @@ export default function RecentOfframpsTable({ rows = MOCK_ROWS, isLoading }: Rec
         <a
           href="/history"
           className={cn(
-            "text-[10px] tracking-widest uppercase text-[#c9a962] border border-[#c9a962] px-3 py-1",
+            "text-[10px] tracking-widest uppercase text-[#c9a962] border border-[#c9a962] px-3 py-1 min-h-[44px] flex items-center",
             "hover:bg-[#c9a962] hover:text-[#0a0a0a] transition-colors duration-150",
             "focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]"
           )}

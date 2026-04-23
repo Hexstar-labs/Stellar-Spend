@@ -420,8 +420,8 @@ export default function StellarSpendDashboard() {
         onDisconnect={handleDisconnect}
       />
 
-      <section className="border border-[#333333] px-[2.6rem] py-8 max-[1100px]:p-4 overflow-hidden mt-6">
-        <div className="grid grid-cols-[1fr_370px] gap-6 max-[1100px]:grid-cols-1 overflow-hidden w-full">
+      <section className="border border-[#333333] px-4 py-6 sm:px-8 sm:py-8 overflow-hidden mt-6">
+        <div className="grid grid-cols-1 min-[1100px]:grid-cols-[1fr_370px] gap-6 w-full">
           {/* Left: form */}
           <div data-testid="FormCard">
             <FormCard
@@ -439,7 +439,7 @@ export default function StellarSpendDashboard() {
           {/* Right: payout preview */}
           <div
             data-testid="RightPanel"
-            className="col-start-2 row-start-1 row-span-2 max-[1100px]:col-start-1 max-[1100px]:row-span-1"
+            className="min-[1100px]:col-start-2 min-[1100px]:row-start-1 min-[1100px]:row-span-2"
           >
             <RightPanel
               isConnected={isConnected}
@@ -452,13 +452,13 @@ export default function StellarSpendDashboard() {
             />
           </div>
 
-          {/* Recent offramps — transactions state is ready for when RecentOfframpsTable accepts props */}
+          {/* Recent offramps */}
           <div>
             <RecentOfframpsTable />
           </div>
 
           {/* Progress steps */}
-          <div className="col-span-1 min-[1101px]:col-span-2 mt-4">
+          <div className="min-[1100px]:col-span-2 mt-4">
             <ProgressSteps isConnected={isConnected} isConnecting={isConnecting} />
           </div>
         </div>

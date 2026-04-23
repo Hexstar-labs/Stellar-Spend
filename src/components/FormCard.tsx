@@ -69,9 +69,149 @@ function inputCls(error?: boolean) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+interface FieldProps {
+  label: string;
+  value: string;
+  loading?: boolean;
+  placeholder?: string;
+}
+
+function Field({ label, value, loading, placeholder = "—" }: FieldProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10px] tracking-[0.18em] text-[#777777] uppercase">{label}</span>
+      <div className="bg-[#0a0a0a] border border-[#333333] px-3 py-2.5 text-sm min-h-[42px] flex items-center">
+        {loading ? (
+          <span className="text-[#777777] text-xs tracking-wider">Resolving...</span>
+        ) : value ? (
+          <span className="text-[#c9a962]">{value}</span>
+        ) : (
+          <span className="text-[#444444]">{placeholder}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface FeeMethodSelectorProps {
+  value: FeeMethod;
+  onChange: (v: FeeMethod) => void;
+  usdcFee: string | null;
+  xlmFee: string | null;
+  disabled?: boolean;
+}
+
+function FeeMethodSelector({ value, onChange, usdcFee, xlmFee, disabled }: FeeMethodSelectorProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10px] tracking-[0.18em] text-[#777777] uppercase">Gas Fee Method</span>
+      <div className="flex gap-2">
+        {(["USDC", "XLM"] as FeeMethod[]).map((method) => {
+          const fee = method === "USDC" ? usdcFee : xlmFee;
+          const active = value === method;
+          return (
+            <button
+              key={method}
+              type="button"
+              onClick={() => onChange(method)}
+              disabled={disabled}
+              className={cn(
+                "flex-1 py-2.5 px-3 min-h-[44px] text-xs tracking-widest border transition-colors duration-150",
+                "focus:outline-none focus-visible:ring-1 focus-visible:ring-[#c9a962]",
+                "disabled:opacity-40 disabled:cursor-not-allowed",
+                active
+                  ? "border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]"
+                  : "border-[#333333] bg-[#0a0a0a] text-[#777777] hover:border-[#c9a962]/50"
+              )}
+            >
+              <span className="block font-semibold">{method}</span>
+              {fee && (
+                <span className="block text-[10px] mt-0.5 opacity-80">{fee}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-[#777777] leading-relaxed">
+        {value === "XLM"
+          ? "XLM will be used to cover Stellar network fees."
+          : "A small USDC amount will be deducted to cover network fees."}
+      </p>
+    </div>
+  );
+}
+
+function getCurrencySymbol(currency: string): string {
+  const symbols: Record<string, string> = {
+    NGN: "₦",
+    USD: "$",
+    EUR: "€",
+    GBP: "£",
+    KES: "KSh",
+    GHS: "₵",
+    ZAR: "R",
+  };
+  return symbols[currency.toUpperCase()] || currency.toUpperCase();
+}
+
+function formatPayout(amount: string, currency: string): string {
+  const num = parseFloat(amount);
+  if (isNaN(num)) return "—";
+  const symbol = getCurrencySymbol(currency);
+  
+  if (currency.toUpperCase() === "NGN") {
+    return `${symbol}${new Intl.NumberFormat("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num)}`;
+  }
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
+  } catch {
+    return `${symbol} ${num.toFixed(2)}`;
+  }
+}
+
+interface PayoutBoxProps {
+  quote: QuoteResult;
+  currency: string;
+}
+
+function PayoutBox({ quote, currency }: PayoutBoxProps) {
+  return (
+    <div className="border border-[#c9a962]/30 bg-[#c9a962]/5 px-4 py-3 flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] tracking-[0.18em] text-[#777777] uppercase">Estimated Payout</span>
+        <span className="text-[10px] text-[#777777]">
+          Rate: {currency.toUpperCase() === "NGN"
+            ? `${getCurrencySymbol(currency)}${new Intl.NumberFormat("en-NG").format(quote.rate)}`
+            : `${getCurrencySymbol(currency)} ${quote.rate.toFixed(4)}`} / USDC
+        </span>
+      </div>
+      <span className="font-space-grotesk font-bold text-[#c9a962] text-lg tabular-nums">
+        {formatPayout(quote.destinationAmount, currency)}
+      </span>
+    </div>
+  );
+}
+
+type CtaState = "disconnected" | "connecting" | "ready" | "submitting" | "invalid";
+
+function getCtaLabel(state: CtaState): string {
+  switch (state) {
+    case "disconnected": return "CONNECT WALLET";
+    case "connecting":   return "WAITING FOR SIGNATURE...";
+    case "submitting":   return "INITIATING OFFRAMP...";
+    case "invalid":      return "INITIATE OFFRAMP →";
+    case "ready":        return "INITIATE OFFRAMP →";
+  }
+}
+
+function getCtaDisabled(state: CtaState): boolean {
+  return state === "connecting" || state === "submitting" || state === "invalid";
+}
 
 export function FormCard({
   amount,
@@ -256,16 +396,21 @@ export function FormCard({
         />
       </div>
 
-      {/* Account name */}
-      <div className="flex flex-col gap-1.5">
-        <Label>Account Name</Label>
-        <div className="bg-bg border border-line px-3 py-2.5 text-sm min-h-[42px] flex items-center">
-          {isVerifyingAccount ? (
-            <Skeleton width={160} height={14} aria-label="Verifying account…" />
-          ) : accountName ? (
-            <span className="text-accent">{accountName}</span>
-          ) : (
-            <span className="text-[#444444]">—</span>
+        <Field label="Account Name" value={accountName} loading={isVerifyingAccount} />
+
+        {quote && <PayoutBox quote={quote} currency={currency} />}
+
+        <button
+          onClick={ctaState === "disconnected" ? onConnect : handleSubmitForm}
+          disabled={getCtaDisabled(ctaState)}
+          aria-label={getCtaLabel(ctaState)}
+          className={cn(
+            "w-full py-4 min-h-[52px] text-xs font-bold tracking-[0.2em] transition-all duration-200",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]",
+            ctaState === "ready"
+              ? "bg-[#c9a962] text-black hover:bg-[#d4b982]"
+              : "bg-[#222222] text-[#555555] cursor-not-allowed border border-[#333333]",
+            (ctaState === "connecting" || ctaState === "submitting") && "animate-pulse"
           )}
         </div>
       </div>

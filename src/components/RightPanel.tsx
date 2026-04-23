@@ -155,7 +155,7 @@ function HeroPanel({
         <button
           onClick={onConnect}
           className={cn(
-            "mt-1 w-full py-2.5 text-xs tracking-widest border border-[#c9a962]",
+            "mt-1 w-full py-2.5 min-h-[44px] text-xs tracking-widest border border-[#c9a962]",
             "text-[#c9a962] bg-transparent transition-colors duration-150",
             "hover:bg-[#c9a962] hover:text-[#0a0a0a]",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]"
