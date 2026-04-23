@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { TransactionStorage, type Transaction } from "@/lib/transaction-storage";
 import { useStellarWallet } from "@/hooks/useStellarWallet";
-import Header from "@/components/Header";
-import ExportControls from "@/components/ExportControls";
+import { Header } from "@/components/Header";
+import { CopyButton } from "@/components/CopyButton";
 import { cn } from "@/lib/cn";
+import { getCurrencyFlag } from "@/lib/currency-flags";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -173,7 +174,7 @@ export default function HistoryPage() {
         isConnected={isConnected}
         isConnecting={isConnecting}
         walletAddress={wallet?.publicKey}
-        onConnect={connect}
+        onConnect={(walletType) => connect(walletType)}
         onDisconnect={disconnect}
       />
 
@@ -258,40 +259,109 @@ export default function HistoryPage() {
                       "hover:border-[#c9a962] hover:text-[#c9a962] transition-colors duration-150"
                     )}
                   >
-                    <td className="px-5 py-3 text-xs text-[#aaaaaa] whitespace-nowrap">
-                      {formatDate(tx.timestamp)}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-[#777777] font-mono whitespace-nowrap">
-                      {tx.stellarTxHash ? (
-                        <a
-                          href={`https://stellar.expert/explorer/public/tx/${tx.stellarTxHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-[#c9a962] transition-colors duration-150 underline decoration-dotted"
-                        >
-                          {truncateTxHash(tx.stellarTxHash)}
-                        </a>
-                      ) : (
-                        <span className="text-[#555555]">Pending</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-white tabular-nums whitespace-nowrap">
-                      {tx.amount} USDC
-                    </td>
-                    <td className="px-5 py-3 text-xs text-white whitespace-nowrap">
-                      {getCurrencySymbol(tx.currency)} {tx.currency}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-[#aaaaaa] whitespace-nowrap">
-                      {tx.beneficiary.institution}
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <StatusBadge status={tx.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    Reset filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── Table ── */}
+            {filtered.length === 0 ? (
+              <div className="border border-[#333333] bg-[#111111] p-12 text-center">
+                <p className="text-sm text-[#777777]">
+                  {transactions.length === 0 ? "No transactions found" : "No transactions match the current filters"}
+                </p>
+              </div>
+            ) : (
+              <div className="border border-[#333333] bg-[#111111] overflow-x-auto">
+                <table className="w-full min-w-[800px] border-collapse" aria-label="Transaction history">
+                  <thead>
+                    <tr className="bg-[#c9a962]">
+                      {/* Sortable: DATE */}
+                      <th
+                        className="px-5 py-2.5 text-left text-[10px] tracking-[0.18em] font-semibold text-[#0a0a0a] uppercase whitespace-nowrap cursor-pointer select-none"
+                        onClick={() => toggleSort("timestamp")}
+                        aria-sort={filters.sortField === "timestamp" ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"}
+                      >
+                        DATE <SortIcon field="timestamp" />
+                      </th>
+                      <th className="px-5 py-2.5 text-left text-[10px] tracking-[0.18em] font-semibold text-[#0a0a0a] uppercase whitespace-nowrap">
+                        TX HASH
+                      </th>
+                      {/* Sortable: AMOUNT */}
+                      <th
+                        className="px-5 py-2.5 text-left text-[10px] tracking-[0.18em] font-semibold text-[#0a0a0a] uppercase whitespace-nowrap cursor-pointer select-none"
+                        onClick={() => toggleSort("amount")}
+                        aria-sort={filters.sortField === "amount" ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"}
+                      >
+                        AMOUNT <SortIcon field="amount" />
+                      </th>
+                      <th className="px-5 py-2.5 text-left text-[10px] tracking-[0.18em] font-semibold text-[#0a0a0a] uppercase whitespace-nowrap">
+                        CURRENCY
+                      </th>
+                      <th className="px-5 py-2.5 text-left text-[10px] tracking-[0.18em] font-semibold text-[#0a0a0a] uppercase whitespace-nowrap">
+                        BANK
+                      </th>
+                      <th className="px-5 py-2.5 text-left text-[10px] tracking-[0.18em] font-semibold text-[#0a0a0a] uppercase whitespace-nowrap">
+                        STATUS
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((tx, i) => (
+                      <tr
+                        key={tx.id}
+                        className={cn(
+                          "border-b border-[#222222] transition-colors duration-100",
+                          i % 2 === 0 ? "bg-[#111111]" : "bg-[#0f0f0f]",
+                          "hover:bg-[#1a1a1a]"
+                        )}
+                      >
+                        <td className="px-5 py-3 text-xs text-[#aaaaaa] whitespace-nowrap">
+                          {formatDate(tx.timestamp)}
+                        </td>
+                        <td className="px-5 py-3 text-xs text-[#777777] font-mono whitespace-nowrap">
+                          {tx.stellarTxHash ? (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`https://stellar.expert/explorer/public/tx/${tx.stellarTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-[#c9a962] transition-colors duration-150 underline decoration-dotted"
+                              >
+                                {truncateTxHash(tx.stellarTxHash)}
+                              </a>
+                              <CopyButton text={tx.stellarTxHash} label="" className="text-[10px]" />
+                            </div>
+                          ) : (
+                            <span className="text-[#555555]">Pending</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-xs text-white tabular-nums whitespace-nowrap">
+                          {tx.amount} USDC
+                        </td>
+                        <td className="px-5 py-3 text-xs text-white whitespace-nowrap">
+                          <span className="flex items-center gap-1.5">
+                            {getCurrencyFlag(tx.currency) && (
+                              <span aria-hidden="true" className="text-base leading-none">
+                                {getCurrencyFlag(tx.currency)}
+                              </span>
+                            )}
+                            {getCurrencySymbol(tx.currency)} {tx.currency}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-xs text-[#aaaaaa] whitespace-nowrap">
+                          {tx.beneficiary.institution}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          <StatusBadge status={tx.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </>
         )}
       </section>

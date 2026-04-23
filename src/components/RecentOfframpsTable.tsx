@@ -3,6 +3,7 @@
 import { cn } from "@/lib/cn";
 import type { RecentOfframpRow } from "@/types/stellaramp";
 import { CopyButton } from "./CopyButton";
+import { getCurrencyFlag } from "@/lib/currency-flags";
 import { TransactionTableSkeleton } from "./skeletons";
 
 // ---------------------------------------------------------------------------
@@ -145,6 +146,14 @@ export default function RecentOfframpsTable({ rows = MOCK_ROWS, isLoading }: Rec
                   </td>
                   <td className="px-5 py-3 text-xs text-white tabular-nums whitespace-nowrap">
                     {row.fiat}
+                    {" "}
+                    <span className="text-[#777777]">
+                      {getCurrencyFlag(row.currency) && (
+                        <span aria-label={row.currency} title={row.currency} className="ml-1">
+                          {getCurrencyFlag(row.currency)}
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-5 py-3 whitespace-nowrap">
                     <StatusBadge status={row.status} />
