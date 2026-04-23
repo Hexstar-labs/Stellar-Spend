@@ -3,7 +3,7 @@
 import { cn } from "@/lib/cn";
 import { ThemeToggle } from "./ThemeToggle";
 import { CopyButton } from "./CopyButton";
-import { useFxRate } from "@/hooks/useFxRate";
+import FxTicker from "./FxTicker";
 
 export interface HeaderProps {
   subtitle: string;
@@ -80,8 +80,10 @@ export function Header({
   const { rate, flash } = useFxRate();
 
   return (
-    <header className="w-full px-6 py-5 flex items-start justify-between gap-6 max-[720px]:flex-col max-[720px]:items-start" role="banner">
-      {/* Left: title + subtitle + FX chip */}
+    <header className="w-full px-6 py-5 flex flex-col gap-3" role="banner">
+      {/* Top row: title + wallet */}
+      <div className="flex items-start justify-between gap-6 max-[720px]:flex-col max-[720px]:items-start">
+      {/* Left: title + subtitle */}
       <div className="flex flex-col gap-1">
         <h1
           className="font-space-grotesk font-bold text-white leading-none tracking-tight"
@@ -134,6 +136,12 @@ export function Header({
             )}
           </div>
         )}
+      </div>
+      </div>
+
+      {/* FX rate ticker strip */}
+      <div className="border-t border-[#1e1e1e] pt-2 px-1">
+        <FxTicker />
       </div>
     </header>
   );
