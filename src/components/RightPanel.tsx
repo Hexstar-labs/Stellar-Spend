@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { QuoteDisplaySkeleton } from "./skeletons";
+import { useFxRate } from "@/hooks/useFxRate";
 
 export interface RightPanelProps {
   isConnected: boolean;
@@ -87,8 +88,17 @@ function HeroPanel({
   isLoadingQuote,
   currency,
   onConnect,
-}: RightPanelProps) {
+  liveRate,
+  flash,
+}: RightPanelProps & { liveRate: number | null; flash: boolean }) {
   const hasAmount = amount && parseFloat(amount) > 0;
+
+  // Prefer live rate over quote rate for realtime payout calculation
+  const effectiveRate = liveRate ?? quote?.rate ?? null;
+  const liveDestination =
+    effectiveRate && hasAmount
+      ? (parseFloat(amount) * effectiveRate).toFixed(2)
+      : quote?.destinationAmount ?? null;
 
   // Derive hero content based on state
   let heroLabel: string;
@@ -113,14 +123,19 @@ function HeroPanel({
       </span>
     );
     heroMeta = "Fetching live rate...";
-  } else if (isConnected && hasAmount && quote) {
+  } else if (isConnected && hasAmount && (quote || liveDestination)) {
     heroLabel = "ESTIMATED PAYOUT";
     heroValue = (
-      <span className="text-[#c9a962]">
-        {formatFiat(quote.destinationAmount, quote.currency)}
+      <span
+        className={cn(
+          "text-[#c9a962] transition-colors duration-300",
+          flash && "text-white"
+        )}
+      >
+        {formatFiat(liveDestination ?? quote!.destinationAmount, currency || quote!.currency)}
       </span>
     );
-    heroMeta = `Rate: ${formatRate(quote.rate, quote.currency)}`;
+    heroMeta = `Rate: ${formatRate(effectiveRate ?? quote!.rate, currency || quote!.currency)}`;
   } else {
     heroLabel = "READY TO PAYOUT";
     heroValue = <span className="text-[#777777]">Enter amount</span>;
@@ -193,6 +208,7 @@ function BreakdownRow({ label, value, muted }: BreakdownRowProps) {
 
 export default function RightPanel(props: RightPanelProps) {
   const { quote, isConnected, isLoadingQuote, currency } = props;
+  const { rate: liveRate, flash } = useFxRate();
 
   // Show full skeleton when loading quote for the first time (no prior quote)
   if (isLoadingQuote && !quote) {
@@ -204,9 +220,16 @@ export default function RightPanel(props: RightPanelProps) {
       ? `${(parseFloat(props.amount) * 0.0035).toFixed(4)} USDC`
       : "0.35%";
 
+  // Use live rate for payout total when available
+  const effectiveRate = liveRate ?? quote?.rate ?? null;
+  const liveDestination =
+    effectiveRate && props.amount && parseFloat(props.amount) > 0
+      ? (parseFloat(props.amount) * effectiveRate).toFixed(2)
+      : null;
+
   const payoutTotal =
-    isConnected && quote && parseFloat(props.amount) > 0
-      ? formatFiat(quote.destinationAmount, quote.currency)
+    isConnected && (liveDestination || quote) && parseFloat(props.amount) > 0
+      ? formatFiat(liveDestination ?? quote!.destinationAmount, currency || quote!.currency)
       : isLoadingQuote
       ? "..."
       : `— ${currency.toUpperCase()}`;
@@ -214,7 +237,7 @@ export default function RightPanel(props: RightPanelProps) {
   return (
     <div className="flex flex-col gap-4 w-full">
       {/* Hero panel */}
-      <HeroPanel {...props} />
+      <HeroPanel {...props} liveRate={liveRate} flash={flash} />
 
       {/* Settlement breakdown */}
       <div className="border border-[#333333] bg-[#111111] p-5 flex flex-col gap-3">
@@ -243,8 +266,8 @@ export default function RightPanel(props: RightPanelProps) {
           </span>
           <span
             className={cn(
-              "font-space-grotesk font-bold tabular-nums leading-none",
-              isLoadingQuote ? "text-[#777777]" : "text-[#c9a962]"
+              "font-space-grotesk font-bold tabular-nums leading-none transition-colors duration-300",
+              isLoadingQuote ? "text-[#777777]" : flash ? "text-white" : "text-[#c9a962]"
             )}
             style={{ fontSize: "clamp(1.1rem, 2.5vw, 1.5rem)" }}
           >

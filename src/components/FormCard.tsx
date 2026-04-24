@@ -6,6 +6,7 @@ import { buildQuote, calculateBridgeAmount } from "@/lib/offramp/utils/quote-fet
 import { getCurrencyFlag } from "@/lib/currency-flags";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { FormCardSkeleton } from "@/components/skeletons";
+import { useFxRate } from "@/hooks/useFxRate";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -368,21 +369,36 @@ function formatPayout(amount: string, currency: string): string {
 interface PayoutBoxProps {
   quote: QuoteResult;
   currency: string;
+  liveRate?: number | null;
+  flash?: boolean;
 }
 
-function PayoutBox({ quote, currency }: PayoutBoxProps) {
+function PayoutBox({ quote, currency, liveRate, flash }: PayoutBoxProps) {
+  const effectiveRate = liveRate ?? quote.rate;
+  const amount = parseFloat(quote.destinationAmount);
+  // Recalculate payout using live rate if available
+  const liveDestination =
+    liveRate && quote.rate > 0
+      ? ((amount / quote.rate) * liveRate).toFixed(2)
+      : quote.destinationAmount;
+
   return (
     <div className="border border-[#c9a962]/30 bg-[#c9a962]/5 px-4 py-3 flex items-center justify-between gap-4">
       <div className="flex flex-col gap-0.5">
         <span className="text-[10px] tracking-[0.18em] text-[#777777] uppercase">Estimated Payout</span>
         <span className="text-[10px] text-[#777777]">
           Rate: {currency.toUpperCase() === "NGN"
-            ? `${getCurrencySymbol(currency)}${new Intl.NumberFormat("en-NG").format(quote.rate)}`
-            : `${getCurrencySymbol(currency)} ${quote.rate.toFixed(4)}`} / USDC
+            ? `${getCurrencySymbol(currency)}${new Intl.NumberFormat("en-NG").format(effectiveRate)}`
+            : `${getCurrencySymbol(currency)} ${effectiveRate.toFixed(4)}`} / USDC
         </span>
       </div>
-      <span className="font-space-grotesk font-bold text-[#c9a962] text-lg tabular-nums">
-        {formatPayout(quote.destinationAmount, currency)}
+      <span
+        className={cn(
+          "font-space-grotesk font-bold text-lg tabular-nums transition-colors duration-300",
+          flash ? "text-white" : "text-[#c9a962]"
+        )}
+      >
+        {formatPayout(liveDestination, currency)}
       </span>
     </div>
   );
@@ -441,6 +457,8 @@ export function FormCard({
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [gasFees, setGasFees] = useState<GasFeeOptions | null>(null);
+
+  const { rate: liveRate, flash: rateFlash } = useFxRate();
 
   const [isCurrenciesLoading, setIsCurrenciesLoading] = useState(false);
   const [isInstitutionsLoading, setIsInstitutionsLoading] = useState(false);
@@ -812,7 +830,7 @@ export function FormCard({
 
         <Field label="Account Name" value={accountName} loading={isVerifyingAccount} success={!!accountName} />
 
-        {quote && <PayoutBox quote={quote} currency={currency} />}
+        {quote && <PayoutBox quote={quote} currency={currency} liveRate={liveRate} flash={rateFlash} />}
 
         <button
           onClick={ctaState === "disconnected" ? onConnect : handleSubmitForm}

@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { CopyButton } from "@/components/CopyButton";
 import { cn } from "@/lib/cn";
 import { getCurrencyFlag } from "@/lib/currency-flags";
+import { StatusBadge } from "@/components/StatusBadge";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -33,19 +34,6 @@ function getCurrencySymbol(currency: string): string {
     KES: "KSh", GHS: "₵", ZAR: "R",
   };
   return symbols[currency.toUpperCase()] || currency.toUpperCase();
-}
-
-function StatusBadge({ status }: { status: Transaction["status"] }) {
-  const styles = {
-    pending: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
-    completed: "bg-green-500/20 text-green-500 border-green-500/30",
-    failed: "bg-red-500/20 text-red-500 border-red-500/30",
-  };
-  return (
-    <span className={cn("inline-block px-2.5 py-0.5 text-[10px] tracking-widest uppercase font-semibold border", styles[status])}>
-      {status}
-    </span>
-  );
 }
 
 // ---------------------------------------------------------------------------
