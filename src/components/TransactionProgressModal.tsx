@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import type { OfframpStep } from "@/types/stellaramp";
 import { CopyButton } from "./CopyButton";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
+import { TransactionReceipt, type ReceiptData } from "./TransactionReceipt";
 
 // ---------------------------------------------------------------------------
 // Per-step metadata: label, sub-message, ETA seconds
@@ -85,6 +86,7 @@ export type TransactionProgressModalProps = {
   step: OfframpStep;
   errorMessage?: string;
   txHash?: string;
+  receipt?: ReceiptData;
   onClose: () => void;
 };
 
@@ -92,6 +94,7 @@ export function TransactionProgressModal({
   step,
   errorMessage,
   txHash,
+  receipt,
   onClose,
 }: TransactionProgressModalProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -260,24 +263,30 @@ export function TransactionProgressModal({
           )}
 
           {/* Success details */}
-          {step === "success" && txHash && (
-            <div className="w-full flex flex-col gap-2 items-center mt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#777777]">TX Hash:</span>
-                <code className="text-xs text-[#c9a962] font-mono">
-                  {txHash.slice(0, 8)}…{txHash.slice(-8)}
-                </code>
-                <CopyButton text={txHash} label="" className="text-xs" />
+          {step === "success" && (
+            receipt ? (
+              <div className="w-full mt-2">
+                <TransactionReceipt data={receipt} />
               </div>
-              <a
-                href={`https://stellar.expert/explorer/public/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-[#c9a962] hover:text-[#d4b982] transition-colors underline decoration-dotted"
-              >
-                View on Stellar Explorer →
-              </a>
-            </div>
+            ) : txHash ? (
+              <div className="w-full flex flex-col gap-2 items-center mt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#777777]">TX Hash:</span>
+                  <code className="text-xs text-[#c9a962] font-mono">
+                    {txHash.slice(0, 8)}…{txHash.slice(-8)}
+                  </code>
+                  <CopyButton text={txHash} label="" className="text-xs" />
+                </div>
+                <a
+                  href={`https://stellar.expert/explorer/public/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[#c9a962] hover:text-[#d4b982] transition-colors underline decoration-dotted"
+                >
+                  View on Stellar Explorer →
+                </a>
+              </div>
+            ) : null
           )}
 
           {/* Dismiss */}

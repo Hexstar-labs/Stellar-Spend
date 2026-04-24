@@ -5,6 +5,7 @@ import type { RecentOfframpRow } from "@/types/stellaramp";
 import { CopyButton } from "./CopyButton";
 import { getCurrencyFlag } from "@/lib/currency-flags";
 import { TransactionTableSkeleton } from "./skeletons";
+import { StatusBadge } from "./StatusBadge";
 
 // ---------------------------------------------------------------------------
 // Mock data — replaced by real TransactionStorage rows when wired up
@@ -39,21 +40,6 @@ function getCurrencyColumnHeader(rows: ReadonlyArray<RecentOfframpRow>): string 
   const firstCurrency = rows[0].currency;
   const allSameCurrency = rows.every(row => row.currency === firstCurrency);
   return allSameCurrency ? firstCurrency.toUpperCase() : "FIAT";
-}
-
-function StatusBadge({ status }: { status: RecentOfframpRow["status"] }) {
-  return (
-    <span
-      className={cn(
-        "inline-block px-2.5 py-0.5 text-[10px] tracking-widest uppercase font-semibold",
-        status === "SETTLING"
-          ? "bg-[#c9a962] text-[#0a0a0a]"
-          : "border border-white text-white bg-transparent"
-      )}
-    >
-      {status}
-    </span>
-  );
 }
 
 // ---------------------------------------------------------------------------

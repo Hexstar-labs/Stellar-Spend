@@ -5,6 +5,7 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastContainer } from "@/components/Toast";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -47,7 +48,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${ibmPlexMono.variable} ${spaceGrotesk.variable} font-ibm-plex-mono`}>
         <ThemeProvider>
           <ToastProvider>
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
             <ToastContainer />
           </ToastProvider>
         </ThemeProvider>

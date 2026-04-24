@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { getCurrencyFlag } from "@/lib/currency-flags";
 import { TransactionTableSkeleton } from "@/components/skeletons";
 import ExportControls from "@/components/ExportControls";
+import { StatusBadge } from "@/components/StatusBadge";
 
 // ---------------------------------------------------------------------------
 // Helpers
