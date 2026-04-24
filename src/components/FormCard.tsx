@@ -7,6 +7,7 @@ import { getCurrencyFlag } from "@/lib/currency-flags";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { FormCardSkeleton } from "@/components/skeletons";
 import { BankAccountInput, type BankMode } from "@/components/BankAccountInput";
+import { QuoteComparison, type ProviderQuote } from "@/components/QuoteComparison";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -389,6 +390,54 @@ function PayoutBox({ quote, currency }: PayoutBoxProps) {
   );
 }
 
+function buildProviderQuotes(quote: QuoteResult, currency: string): ProviderQuote[] {
+  const base = parseFloat(quote.destinationAmount);
+  const baseRate = quote.rate;
+  const baseFee = parseFloat(quote.bridgeFee ?? "0.5");
+
+  return [
+    {
+      id: "paycrest",
+      provider: "Paycrest",
+      rate: baseRate,
+      bridgeFee: (baseFee).toFixed(2),
+      payoutFee: "0.00",
+      totalFee: baseFee.toFixed(2),
+      estimatedTime: 300,
+      destinationAmount: base.toFixed(2),
+      currency,
+      rating: 5,
+      badge: "Best Rate",
+    },
+    {
+      id: "yellowcard",
+      provider: "Yellow Card",
+      rate: Math.round(baseRate * 0.992),
+      bridgeFee: (baseFee + 0.3).toFixed(2),
+      payoutFee: "0.50",
+      totalFee: (baseFee + 0.8).toFixed(2),
+      estimatedTime: 180,
+      destinationAmount: (base * 0.992).toFixed(2),
+      currency,
+      rating: 4,
+      badge: "Fastest",
+    },
+    {
+      id: "kotani",
+      provider: "Kotani Pay",
+      rate: Math.round(baseRate * 0.985),
+      bridgeFee: (baseFee + 0.1).toFixed(2),
+      payoutFee: "0.20",
+      totalFee: (baseFee + 0.3).toFixed(2),
+      estimatedTime: 420,
+      destinationAmount: (base * 0.985).toFixed(2),
+      currency,
+      rating: 4,
+      badge: "Lowest Fee",
+    },
+  ];
+}
+
 type CtaState = "disconnected" | "connecting" | "ready" | "submitting" | "invalid";
 
 function getCtaLabel(state: CtaState): string {
@@ -457,6 +506,7 @@ export function FormCard({
   const [accountError, setAccountError] = useState("");
   const [quoteError, setQuoteError] = useState("");
   const [verifyError, setVerifyError] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("paycrest");
 
   // Track which fields have been touched (blurred) for validation UX
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -814,6 +864,15 @@ export function FormCard({
         <Field label="Account Name" value={accountName} loading={isVerifyingAccount} success={!!accountName} />
 
         {quote && <PayoutBox quote={quote} currency={currency} />}
+
+        {quote && (
+          <QuoteComparison
+            quotes={buildProviderQuotes(quote, currency)}
+            selectedId={selectedProviderId}
+            onSelect={setSelectedProviderId}
+            isLoading={isQuoteLoading}
+          />
+        )}
 
         <button
           onClick={ctaState === "disconnected" ? onConnect : handleSubmitForm}
