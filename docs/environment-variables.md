@@ -290,6 +290,18 @@ HTTP endpoint used by the transaction notification service to send SMS payloads 
 | Default | _(unset)_ |
 
 Optional bearer token attached to requests sent to `SMS_NOTIFICATION_ENDPOINT`.
+
+---
+
+### `API_KEY_ADMIN_TOKEN`
+
+| | |
+|---|---|
+| Required | No |
+| Exposed to browser | No |
+| Default | _(disabled)_ |
+
+Bearer token used to authorize API key management endpoints under `/api/api-keys`. When unset, key management routes are effectively disabled.
 | Exposed to browser | No |
 
 Sentry auth token used by the webpack plugin to authenticate source map uploads. Generate at [sentry.io/settings/account/api/auth-tokens](https://sentry.io/settings/account/api/auth-tokens/).

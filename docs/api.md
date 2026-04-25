@@ -8,6 +8,82 @@ All `/api/offramp/*` endpoints are **server-side only** and use environment-conf
 
 The webhook endpoint (`/api/webhooks/paycrest`) verifies requests using HMAC-SHA256 via the `X-Paycrest-Signature` header.
 
+Versioned programmatic endpoints under `/api/v1/*` require an API key via either:
+
+- `X-API-Key: <key>`
+- `Authorization: Bearer <key>`
+
+---
+
+## API Keys
+
+Programmatic access uses managed API keys. Keys are stored hashed in the database, can be rotated or revoked, and track usage plus per-key rate limits.
+
+### Management endpoints
+
+API key management routes require:
+
+```http
+Authorization: Bearer <API_KEY_ADMIN_TOKEN>
+```
+
+### POST /api/api-keys
+
+Creates a new API key and returns the plaintext secret once.
+
+**Request Body**
+```json
+{
+  "name": "Production Partner",
+  "rateLimitMaxRequests": 120,
+  "rateLimitWindowMs": 60000
+}
+```
+
+**Response `201`**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "Production Partner",
+    "keyPrefix": "abc123def456",
+    "status": "active",
+    "plaintextKey": "ssp_live_abc123def456.very-secret-value"
+  }
+}
+```
+
+### GET /api/api-keys
+
+Lists all API keys without exposing plaintext secrets.
+
+### POST /api/api-keys/[id]/rotate
+
+Creates a replacement key, marks the prior key as `rotated`, and returns the new plaintext key once.
+
+### POST /api/api-keys/[id]/revoke
+
+Revokes a key immediately.
+
+**Request Body**
+```json
+{
+  "reason": "Key leaked during credential rotation"
+}
+```
+
+### GET /api/api-keys/[id]/usage
+
+Returns the most recent usage events for the key.
+
+### Programmatic auth behavior
+
+- Only `/api/v1/*` endpoints require API keys.
+- `/api/v1/health` remains public.
+- Revoked, rotated, invalid, or expired keys return `401`.
+- Per-key rate limit violations return `429` with `Retry-After`.
+- Successful authenticated requests include `X-API-Key-Id`.
+
 ---
 
 ## Rate Limiting
@@ -18,6 +94,7 @@ Two endpoints enforce per-IP rate limits:
 |---|---|
 | `POST /api/offramp/bridge/build-tx` | See `buildTxLimiter` config |
 | `POST /api/offramp/paycrest/order` | See `paycrestOrderLimiter` config |
+| `/api/v1/*` with API keys | Per-key limit from the stored API key record |
 
 Rate-limited responses return `429` with a `Retry-After` header (seconds) and `X-Request-Id`.
 
