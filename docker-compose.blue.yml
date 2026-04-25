@@ -1,9 +1,11 @@
+# Blue environment — port 3000
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: stellar-spend:latest
+    image: stellar-spend:${IMAGE_TAG:-latest}
+    container_name: stellar-spend-blue
     ports:
       - "3000:3000"
     env_file:

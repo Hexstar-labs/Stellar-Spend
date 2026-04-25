@@ -1,11 +1,13 @@
+# Green environment — port 3001
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: stellar-spend:latest
+    image: stellar-spend:${IMAGE_TAG:-latest}
+    container_name: stellar-spend-green
     ports:
-      - "3000:3000"
+      - "3001:3000"
     env_file:
       - .env.local
     restart: unless-stopped
