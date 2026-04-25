@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { env } from '@/lib/env';
 import { ErrorHandler } from '@/lib/error-handler';
 import { withPaycrestTimeout } from '@/lib/offramp/utils/timeout';
+import { getActiveCurrencies, isSupportedCurrency, validateCurrencyAmount } from '@/lib/currencies';
+import { getCurrencyFlag } from '@/lib/currency-flags';
 
 export const maxDuration = 10;
 
@@ -9,6 +11,9 @@ interface Currency {
   code: string;
   name: string;
   symbol: string;
+  flag?: string;
+  minAmount?: number;
+  maxAmount?: number;
 }
 
 class PaycrestAdapter {
@@ -36,7 +41,6 @@ class PaycrestAdapter {
 
     const data = await response.json();
 
-    // Transform Paycrest response to our format
     const currencies = Array.isArray(data)
       ? data.map((c: any) => ({
         code: c.code || c.currency || '',
@@ -59,43 +63,108 @@ let cacheTimestamp: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * GET /api/offramp/currencies
- * 
- * Fetches supported fiat currencies from Paycrest API.
- * Returns list of currencies with code, name, and symbol.
- * Caches result for 5 minutes.
+ * Merges Paycrest currencies with local config to enrich with flags and limits.
+ * Filters to only active currencies from local config.
  */
-export async function GET() {
+function enrichCurrencies(remote: Currency[]): Currency[] {
+  const active = getActiveCurrencies();
+  const activeCodes = new Set(active.map((c) => c.code));
+
+  // Start with remote currencies that are in our active list
+  const enriched = remote
+    .filter((c) => activeCodes.has(c.code.toUpperCase()))
+    .map((c) => {
+      const local = active.find((a) => a.code === c.code.toUpperCase());
+      return {
+        ...c,
+        flag: getCurrencyFlag(c.code),
+        minAmount: local?.minAmount,
+        maxAmount: local?.maxAmount,
+      };
+    });
+
+  // Add any active local currencies not returned by remote
+  const remoteCodes = new Set(remote.map((c) => c.code.toUpperCase()));
+  for (const local of active) {
+    if (!remoteCodes.has(local.code)) {
+      enriched.push({
+        code: local.code,
+        name: local.name,
+        symbol: local.symbol,
+        flag: getCurrencyFlag(local.code),
+        minAmount: local.minAmount,
+        maxAmount: local.maxAmount,
+      });
+    }
+  }
+
+  return enriched;
+}
+
+/**
+ * GET /api/offramp/currencies
+ *
+ * Fetches supported fiat currencies. Tries Paycrest API first, falls back to
+ * local config. Enriches with flags and amount limits.
+ * Caches result for 5 minutes.
+ *
+ * Query params:
+ *   ?validate=<code>&amount=<number> — validate a currency/amount combination
+ */
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+
+  // Currency/amount validation endpoint
+  const validateCode = searchParams.get('validate');
+  if (validateCode) {
+    const amountStr = searchParams.get('amount');
+    if (!isSupportedCurrency(validateCode)) {
+      return NextResponse.json({ valid: false, error: `Unsupported currency: ${validateCode}` });
+    }
+    if (amountStr) {
+      const amount = parseFloat(amountStr);
+      const error = validateCurrencyAmount(validateCode, amount);
+      if (error) return NextResponse.json({ valid: false, error });
+    }
+    return NextResponse.json({ valid: true });
+  }
+
   try {
     // Check cache
     const now = Date.now();
     if (cachedCurrencies && now - cacheTimestamp < CACHE_DURATION) {
       return NextResponse.json(
         { data: cachedCurrencies },
-        {
-          headers: { 'Cache-Control': 'public, max-age=300' },
-        }
+        { headers: { 'Cache-Control': 'public, max-age=300' } }
       );
     }
 
-    // Instantiate PaycrestAdapter
-    const paycrest = new PaycrestAdapter(env.server.PAYCREST_API_KEY);
+    let currencies: Currency[];
+    try {
+      const paycrest = new PaycrestAdapter(env.server.PAYCREST_API_KEY);
+      const remote = await paycrest.getCurrencies();
+      currencies = enrichCurrencies(remote);
+    } catch {
+      // Fallback to local config
+      currencies = getActiveCurrencies().map((c) => ({
+        code: c.code,
+        name: c.name,
+        symbol: c.symbol,
+        flag: getCurrencyFlag(c.code),
+        minAmount: c.minAmount,
+        maxAmount: c.maxAmount,
+      }));
+    }
 
-    // Get currencies
-    const currencies = await paycrest.getCurrencies();
-
-    // Cache the result
     cachedCurrencies = currencies;
     cacheTimestamp = now;
 
     return NextResponse.json(
       { data: currencies },
-      {
-        headers: { 'Cache-Control': 'public, max-age=300' },
-      }
+      { headers: { 'Cache-Control': 'public, max-age=300' } }
     );
   } catch (error) {
-    console.error('Error fetching currencies from Paycrest:', error);
+    console.error('Error fetching currencies:', error);
     return ErrorHandler.handle(error);
   }
 }

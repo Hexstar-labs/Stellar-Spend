@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server';
+import { ErrorHandler } from '@/lib/error-handler';
+import { processRefund, processEligibleRefunds, isRefundEligible } from '@/lib/refund/refund-service';
+import { dal } from '@/lib/db/dal';
+
+export const maxDuration = 30;
+
+/**
+ * POST /api/offramp/refund
+ * Body: { transactionId: string; reason?: string; partial?: boolean }
+ *   OR: { userAddress: string } to process all eligible refunds for a user
+ */
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    // Bulk refund for a user
+    if (body.userAddress && !body.transactionId) {
+      const results = await processEligibleRefunds(body.userAddress);
+      return NextResponse.json({ data: results });
+    }
+
+    const { transactionId, reason = 'manual', partial = false } = body;
+    if (!transactionId || typeof transactionId !== 'string') {
+      return ErrorHandler.validation('transactionId is required');
+    }
+
+    const result = await processRefund(transactionId, reason, partial);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ data: result });
+  } catch (err) {
+    return ErrorHandler.handle(err);
+  }
+}
+
+/**
+ * GET /api/offramp/refund?transactionId=xxx
+ * Returns refund eligibility for a transaction.
+ */
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const transactionId = searchParams.get('transactionId');
+    if (!transactionId) {
+      return ErrorHandler.validation('transactionId query param is required');
+    }
+    const tx = await dal.getById(transactionId);
+    if (!tx) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+    }
+    return NextResponse.json({ data: { transactionId, eligible: isRefundEligible(tx), status: tx.status, payoutStatus: tx.payoutStatus } });
+  } catch (err) {
+    return ErrorHandler.handle(err);
+  }
+}

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createHmac, timingSafeEqual } from 'crypto';
 import { env } from '@/lib/env';
 import { ErrorHandler } from '@/lib/error-handler';
 import { generateRequestId, createRequestLogger } from '@/lib/offramp/utils/logger';
@@ -7,6 +6,7 @@ import type { PayoutStatus } from '@/lib/offramp/types';
 import { mapPaycrestStatus } from '@/lib/offramp/utils/mapPaycrestStatus';
 import { dal, DatabaseError } from '@/lib/db/dal';
 import { enqueue } from '@/lib/webhook/dispatcher';
+import { verifyWebhookSignature } from '@/lib/webhook/security';
 
 const SENSITIVE_HEADERS = new Set(['authorization', 'x-paycrest-signature']);
 
@@ -20,26 +20,6 @@ function redactHeaders(headers: Headers): Record<string, string> {
 
 export const maxDuration = 10;
 
-async function verifySignature(rawBody: string, signature: string, secret: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody));
-  const computed = Buffer.from(mac).toString('hex');
-  // Timing-safe comparison via fixed-length XOR
-  if (computed.length !== signature.length) return false;
-  let diff = 0;
-  for (let i = 0; i < computed.length; i++) {
-    diff |= computed.charCodeAt(i) ^ signature.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
 export async function POST(request: Request) {
   const requestId = generateRequestId();
   const logger = createRequestLogger(requestId, 'POST', '/api/webhooks/paycrest');
@@ -47,10 +27,20 @@ export async function POST(request: Request) {
   // Read raw body first — must happen before any JSON parsing
   const rawBody = await request.text();
   const signature = request.headers.get('X-Paycrest-Signature') ?? '';
+  const timestamp = request.headers.get('X-Paycrest-Timestamp');
+  const nonce = request.headers.get('X-Paycrest-Nonce');
 
-  if (!await verifySignature(rawBody, signature, env.server.PAYCREST_WEBHOOK_SECRET)) {
-    logger.logError(401, 'Invalid webhook signature');
-    return ErrorHandler.unauthorized('Invalid signature');
+  const verification = await verifyWebhookSignature(
+    rawBody,
+    signature,
+    env.server.PAYCREST_WEBHOOK_SECRET,
+    timestamp,
+    nonce
+  );
+
+  if (!verification.valid) {
+    logger.logError(401, verification.reason ?? 'Invalid webhook signature');
+    return ErrorHandler.unauthorized(verification.reason ?? 'Invalid signature');
   }
 
   // Enqueue for retry tracking — fire-and-forget, does not block the response
@@ -84,6 +74,12 @@ export async function POST(request: Request) {
       await dal.update(transaction.id, { status: 'completed', payoutStatus: 'settled' });
     } else if (eventType === 'payment_order.pending') {
       await dal.update(transaction.id, { payoutStatus: 'pending' });
+    } else if (eventType === 'payment_order.refunded') {
+      await dal.update(transaction.id, { status: 'failed', payoutStatus: 'refunded', error: 'Refunded by Paycrest' });
+      console.log(JSON.stringify({ requestId, event: 'refund.received', orderId, transactionId: transaction.id }));
+    } else if (eventType === 'payment_order.expired') {
+      await dal.update(transaction.id, { status: 'failed', payoutStatus: 'expired', error: 'Order expired' });
+      console.log(JSON.stringify({ requestId, event: 'order.expired', orderId, transactionId: transaction.id }));
     } else {
       console.warn(`unhandled event type: ${eventType}`);
     }

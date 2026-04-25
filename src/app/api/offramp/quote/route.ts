@@ -4,6 +4,7 @@ import { validateAmount } from '@/lib/offramp/utils/validation';
 import { fetchPaycrestQuote, buildQuote, calculateBridgeAmount } from '@/lib/offramp/utils/quote-fetcher';
 import { ErrorHandler } from '@/lib/error-handler';
 import { withAllbridgeTimeout } from '@/lib/offramp/utils/timeout';
+import { isSupportedCurrency } from '@/lib/currencies';
 
 export const maxDuration = 20;
 
@@ -31,6 +32,10 @@ export async function POST(request: NextRequest) {
 
     if (!currency || typeof currency !== 'string') {
       return NextResponse.json({ error: 'currency is required' }, { status: 400 });
+    }
+
+    if (!isSupportedCurrency(currency)) {
+      return NextResponse.json({ error: `Unsupported currency: ${currency}` }, { status: 400 });
     }
 
     const normalizedFee = FEE_METHOD_MAP[feeMethod];
