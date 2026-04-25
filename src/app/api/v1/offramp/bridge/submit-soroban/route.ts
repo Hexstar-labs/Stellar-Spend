@@ -1,1 +1,7 @@
-export { POST } from '@/app/api/offramp/bridge/submit-soroban/route';
+import { NextRequest } from 'next/server';
+import { POST as basePOST } from '@/app/api/offramp/bridge/submit-soroban/route';
+import { withApiKeyAuth } from '@/lib/api-keys/auth';
+
+export async function POST(request: NextRequest) {
+  return withApiKeyAuth(request, async () => basePOST(request));
+}
